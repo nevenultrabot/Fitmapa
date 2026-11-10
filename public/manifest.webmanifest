@@ -1,0 +1,11 @@
+{
+  "name": "FitMapa — personalni treneri",
+  "short_name": "FitMapa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f4ef",
+  "theme_color": "#14161a",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
