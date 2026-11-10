@@ -24,7 +24,7 @@ export default function MapView({
   zoom = 13,
   showLocate = true,
   autoLocate = false,
-  cooperative = false,
+  ctrlZoom = false,
   className = '',
 }) {
   const containerRef = useRef(null);
@@ -48,20 +48,27 @@ export default function MapView({
       const maplibregl = (await import('maplibre-gl')).default;
       if (cancelled || !containerRef.current) return;
       libRef.current = maplibregl;
+      const touch = window.matchMedia?.('(pointer: coarse)').matches;
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: MAP_STYLE,
         center: [center.lng, center.lat],
         zoom,
         attributionControl: { compact: true },
-        // na Početnoj: točkić skroluje stranicu, a mapa se zumira uz Ctrl / dva prsta
-        cooperativeGestures: cooperative,
+        dragRotate: false,   // bez rotiranja mape
+        pitchWithRotate: false,
+        // računar (na Početnoj): točkić skroluje stranicu, a mapa se zumira uz Ctrl + točkić
+        cooperativeGestures: ctrlZoom && !touch,
         locale: {
           'CooperativeGesturesHandler.WindowsHelpText': 'Drži Ctrl i skroluj da zumiraš mapu',
           'CooperativeGesturesHandler.MacHelpText': 'Drži ⌘ i skroluj da zumiraš mapu',
-          'CooperativeGesturesHandler.MobileHelpText': 'Pomeraj mapu sa dva prsta',
+          'CooperativeGesturesHandler.MobileHelpText': 'Pomeraj mapu prstom, zumiraj sa dva prsta',
         },
       });
+      // Gestovi: točkić zumira direktno; na dodir — 1 prst pomera, 2 prsta zumiraju
+      map.touchZoomRotate?.disableRotation();
+      map.touchPitch?.disable();
+      if (touch) map.doubleClickZoom?.disable();
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       map.on('click', (e) => callbacks.current.onMapClick?.({ lng: e.lngLat.lng, lat: e.lngLat.lat }));
       mapRef.current = map;

@@ -125,10 +125,23 @@ export default function Intro() {
     setPhase('split');
   }, []);
 
+  // skrol do mape (dno stranice — gore ostaje traka uvoda sa strelicom za povratak)
   const goToMap = useCallback(() => {
-    const el = mapRef.current;
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - HEADER_PX, behavior: 'smooth' });
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
   }, []);
+
+  // strelica pokazuje dole dok smo na uvodu, a gore kad smo na mapi
+  const [atMap, setAtMap] = useState(false);
+  useEffect(() => {
+    if (phase !== 'split') return;
+    const onScroll = () => {
+      const el = mapRef.current;
+      if (el) setAtMap(el.getBoundingClientRect().top < window.innerHeight * 0.45);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [phase]);
 
   const replay = useCallback(() => {
     window.scrollTo({ top: 0 });
@@ -181,7 +194,11 @@ export default function Intro() {
         </div>
         {split && (
           <>
-            <button className="home-arrow" onClick={goToMap} aria-label="Nastavi do mape">
+            <button
+              className={`home-arrow ${atMap ? 'up' : ''}`}
+              onClick={atMap ? () => window.scrollTo({ top: 0, behavior: 'smooth' }) : goToMap}
+              aria-label={atMap ? 'Nazad na uvod' : 'Nastavi do mape'}
+            >
               <FiChevronDown aria-hidden="true" />
             </button>
             <button className="home-replay" onClick={replay} aria-label="Pusti uvod ponovo" title="Pusti uvod ponovo">

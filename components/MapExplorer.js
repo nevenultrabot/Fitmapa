@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { FiChevronLeft, FiList } from 'react-icons/fi';
 import MapView from '@/components/MapView';
 import GymCover from '@/components/GymCover';
 import GymDetails from '@/components/GymDetails';
@@ -19,9 +20,9 @@ function distanceKm(a, b) {
 }
 
 /**
- * Mapa teretana sa listom i detaljima.
- * embedded = prikaz na Početnoj: zumiranje uz Ctrl/dva prsta (da skrol stranice radi),
- * bez automatske lokacije, a na telefonu lista počinje sklopljena.
+ * Mapa teretana sa bočnom fiokom (lista i detalji teretana).
+ * Fioka: na računaru otvorena, na telefonu zatvorena — otvara se pulsirajućim dugmetom levo.
+ * embedded = prikaz na Početnoj (bez automatske lokacije).
  */
 export default function MapExplorer({ embedded = false }) {
   const [gyms, setGyms] = useState([]);
@@ -29,9 +30,8 @@ export default function MapExplorer({ embedded = false }) {
   const [selectedId, setSelectedId] = useState(null);
   const [userPoint, setUserPoint] = useState(null);
   const [query, setQuery] = useState('');
-  const [sheetOpen, setSheetOpen] = useState(() =>
-    embedded && typeof window !== 'undefined' ? window.innerWidth >= 900 : true
-  );
+  // null = automatski (CSS: otvorena na računaru, zatvorena na telefonu), pa true/false posle klika
+  const [drawer, setDrawer] = useState(null);
 
   useEffect(() => {
     getSupabase()
@@ -70,7 +70,7 @@ export default function MapExplorer({ embedded = false }) {
 
   function select(id) {
     setSelectedId(id);
-    setSheetOpen(true);
+    setDrawer(true);
   }
 
   return (
@@ -81,17 +81,17 @@ export default function MapExplorer({ embedded = false }) {
         onSelect={select}
         onLocated={setUserPoint}
         autoLocate={!embedded}
-        cooperative={embedded}
+        ctrlZoom={embedded}
       />
 
-      <aside className={`sheet ${sheetOpen ? 'open' : 'closed'}`}>
-        <button className="sheet-handle" onClick={() => setSheetOpen((o) => !o)} aria-label="Prikaži ili sakrij listu">
-          <span />
+      <aside className={`drawer ${drawer === null ? 'auto' : drawer ? 'open' : 'closed'}`} aria-label="Lista teretana">
+        <button className="drawer-close" onClick={() => setDrawer(false)} aria-label="Sakrij listu teretana" title="Sakrij listu">
+          <FiChevronLeft aria-hidden="true" />
         </button>
 
         {error && <p className="alert alert-error">Greška pri učitavanju: {error}</p>}
 
-        <div className="sheet-body">
+        <div className="drawer-body">
           {selectedGym ? (
             <>
               <button className="link-back" onClick={() => setSelectedId(null)}>
@@ -148,6 +148,12 @@ export default function MapExplorer({ embedded = false }) {
           )}
         </div>
       </aside>
+
+      <button className="drawer-open" onClick={() => setDrawer(true)} aria-label="Otvori listu teretana">
+        <FiList aria-hidden="true" />
+        <span>Teretane</span>
+        {gyms.length > 0 && <span className="drawer-open-count">{gyms.length}</span>}
+      </button>
     </div>
   );
 }
