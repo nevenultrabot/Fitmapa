@@ -24,6 +24,7 @@ export default function MapView({
   zoom = 13,
   showLocate = true,
   autoLocate = false,
+  cooperative = false,
   className = '',
 }) {
   const containerRef = useRef(null);
@@ -42,6 +43,7 @@ export default function MapView({
   // 1) Pravljenje mape (jednom)
   useEffect(() => {
     let cancelled = false;
+    let resizeObs = null;
     (async () => {
       const maplibregl = (await import('maplibre-gl')).default;
       if (cancelled || !containerRef.current) return;
@@ -52,14 +54,25 @@ export default function MapView({
         center: [center.lng, center.lat],
         zoom,
         attributionControl: { compact: true },
+        // na Početnoj: točkić skroluje stranicu, a mapa se zumira uz Ctrl / dva prsta
+        cooperativeGestures: cooperative,
+        locale: {
+          'CooperativeGesturesHandler.WindowsHelpText': 'Drži Ctrl i skroluj da zumiraš mapu',
+          'CooperativeGesturesHandler.MacHelpText': 'Drži ⌘ i skroluj da zumiraš mapu',
+          'CooperativeGesturesHandler.MobileHelpText': 'Pomeraj mapu sa dva prsta',
+        },
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       map.on('click', (e) => callbacks.current.onMapClick?.({ lng: e.lngLat.lng, lat: e.lngLat.lat }));
       mapRef.current = map;
+      // kad kontejner promeni veličinu (npr. animacija na početnoj), mapa se prilagodi
+      resizeObs = new ResizeObserver(() => map.resize());
+      resizeObs.observe(containerRef.current);
       setReady(true);
     })();
     return () => {
       cancelled = true;
+      resizeObs?.disconnect();
       mapRef.current?.remove();
       mapRef.current = null;
       markersRef.current.clear();

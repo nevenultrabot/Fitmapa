@@ -54,7 +54,7 @@ export default function TrainerPanelPage() {
     return (
       <div className="page narrow">
         <p>Ovaj panel je samo za personalne trenere.</p>
-        <Link href="/" className="btn">Nazad na mapu</Link>
+        <Link href="/mapa" className="btn">Nazad na mapu</Link>
       </div>
     );
   }

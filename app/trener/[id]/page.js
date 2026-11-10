@@ -85,7 +85,7 @@ export default function TrainerProfilePage() {
     return (
       <div className="page">
         <p>Ovaj profil ne postoji ili još nije objavljen.</p>
-        <Link href="/" className="btn">Nazad na mapu</Link>
+        <Link href="/mapa" className="btn">Nazad na mapu</Link>
       </div>
     );
 
@@ -100,7 +100,7 @@ export default function TrainerProfilePage() {
 
   return (
     <div className="page profile-page">
-      <Link href="/" className="link-back">← Mapa</Link>
+      <Link href="/mapa" className="link-back">← Mapa</Link>
 
       {isOwn && !trainer.is_published && (
         <p className="alert alert-warn">

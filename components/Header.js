@@ -24,7 +24,8 @@ export default function Header() {
 
   const isActive = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
   const links = [
-    { href: '/', label: 'Mapa' },
+    { href: '/', label: 'Početna' },
+    { href: '/mapa', label: 'Mapa' },
     { href: '/treneri', label: 'Treneri' },
     { href: '/teretane', label: 'Teretane' },
   ];

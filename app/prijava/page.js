@@ -24,7 +24,7 @@ export default function LoginPage() {
 
   async function goAfterLogin(userId) {
     const { data } = await getSupabase().from('profiles').select('role').eq('id', userId).maybeSingle();
-    router.push(next || (data?.role === 'trainer' ? '/panel' : '/'));
+    router.push(next || (data?.role === 'trainer' ? '/panel' : '/mapa'));
   }
 
   async function submit(e) {

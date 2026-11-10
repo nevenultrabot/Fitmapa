@@ -57,7 +57,7 @@ export default function MyBookingsPage() {
       <h2 className="section-title">Predstojeći</h2>
       {upcoming.length === 0 ? (
         <p className="muted">
-          Nemaš zakazanih termina. <Link href="/">Pronađi trenera na mapi →</Link>
+          Nemaš zakazanih termina. <Link href="/mapa">Pronađi trenera na mapi →</Link>
         </p>
       ) : (
         <ul className="booking-list">
