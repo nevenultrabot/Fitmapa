@@ -57,12 +57,13 @@ export default function MapView({
         attributionControl: { compact: true },
         dragRotate: false,   // bez rotiranja mape
         pitchWithRotate: false,
-        // računar (na Početnoj): točkić skroluje stranicu, a mapa se zumira uz Ctrl + točkić
-        cooperativeGestures: ctrlZoom && !touch,
+        // na Početnoj: točkić / jedan prst skroluju stranicu;
+        // mapa se zumira uz Ctrl + točkić (računar), a pomera i zumira sa dva prsta (telefon)
+        cooperativeGestures: ctrlZoom,
         locale: {
           'CooperativeGesturesHandler.WindowsHelpText': 'Drži Ctrl i skroluj da zumiraš mapu',
           'CooperativeGesturesHandler.MacHelpText': 'Drži ⌘ i skroluj da zumiraš mapu',
-          'CooperativeGesturesHandler.MobileHelpText': 'Pomeraj mapu prstom, zumiraj sa dva prsta',
+          'CooperativeGesturesHandler.MobileHelpText': 'Koristi dva prsta za pomeranje mape',
         },
       });
       // Gestovi: točkić zumira direktno; na dodir — 1 prst pomera, 2 prsta zumiraju

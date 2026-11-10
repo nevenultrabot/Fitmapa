@@ -16,7 +16,7 @@ import { StickFlex, StickScale, StickWalk } from './Stickmen';
    --------------------------------------------------------------------- */
 
 const SEEN_KEY = 'fitmapa-intro';
-const LOGO_MS = 3600;
+const LOGO_MS = 2800;
 const MESSAGES = [
   { word: 'smršaš?', Stick: StickScale },
   { word: 'ojačaš?', Stick: StickFlex },
@@ -24,13 +24,13 @@ const MESSAGES = [
 ];
 const FINAL = 'Put ka preokretu nikad nije bio dostupniji.';
 const FINAL_ACCENT = 'preokretu';
-const TYPE_MS = 90;
-const FINAL_TYPE_MS = 55;
+const TYPE_MS = 75;
+const FINAL_TYPE_MS = 45;
 const DELETE_MS = 40;
-const HOLD_MS = 2300;
-const SUB_HOLD_MS = 1200; // posle 4. poruke koraci kreću za ~1.5 s
-const MORPH_MS = 1000;
-const SPLIT_DELAY_MS = 4000; // pauza posle poslednje animacije pre prelaza na mapu
+const HOLD_MS = 1500;
+const SUB_HOLD_MS = 900; // posle 4. poruke koraci kreću za ~1.1 s
+const MORPH_MS = 850;
+const SPLIT_DELAY_MS = 3200; // pauza posle poslednje animacije pre prelaza na mapu
 const INTRO_SHARE = 0.7;     // uvod zauzima 70% visine, mapa 30%
 const HEADER_PX = 56;
 
@@ -39,7 +39,7 @@ const STEPS = [
   { Icon: FiUser, title: 'Izaberi trenera', text: 'Pogledaj profile, specijalnosti i cene trenera koji tu rade.' },
   { Icon: FiCalendar, title: 'Zakaži termin', text: 'Klikni na slobodan termin i dođi — plaćaš na licu mesta.' },
 ];
-const STEPS_TOTAL_MS = 10900; // mora da se slaže sa CSS-om koraka
+const STEPS_TOTAL_MS = 7800; // mora da se slaže sa CSS-om koraka
 
 const COMPACT = ['steps', 'cta', 'split'];
 
@@ -86,13 +86,26 @@ export default function Intro() {
       introRef.current?.scrollTo({ top: 0, behavior: instant ? 'auto' : 'smooth' });
       window.scrollTo({ top: 0, behavior: instant ? 'auto' : 'smooth' });
       const t1 = setTimeout(() => setSkipGone(true), 500); // Preskoči izbledi, pa nestane
-      const t2 = setTimeout(() => setSettled(true), instant ? 0 : 2700); // posle prelaza mapa bez filtera
+      const t2 = setTimeout(() => setSettled(true), instant ? 0 : 2000); // posle prelaza mapa bez filtera
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
       };
     }
   }, [phase, instant]);
+
+  // tamna pozadina cele stranice dok je Početna otvorena — na iPhone-u se ispod
+  // Safari trake ne vidi bela traka, pa uvod izgleda preko celog ekrana
+  useEffect(() => {
+    const html = document.documentElement;
+    const prev = [html.style.backgroundColor, document.body.style.backgroundColor];
+    html.style.backgroundColor = '#14161a';
+    document.body.style.backgroundColor = '#14161a';
+    return () => {
+      html.style.backgroundColor = prev[0];
+      document.body.style.backgroundColor = prev[1];
+    };
+  }, []);
 
   // dok uvod traje stranica se ne skroluje; posle prelaza se skroluje do mape
   useEffect(() => {
@@ -273,7 +286,7 @@ function Headline({ instant, compact, onDone }) {
       }
       if (!alive()) return;
       setPrefixVisible(false); // "Želiš da" i stickman se povlače
-      await wait(800);
+      await wait(550);
       if (!alive()) return;
       setMsg(-1);
       await wait(250);
@@ -282,7 +295,7 @@ function Headline({ instant, compact, onDone }) {
         setFinalText(FINAL.slice(0, i));
         await wait(FINAL_TYPE_MS);
       }
-      await wait(300);
+      await wait(200);
       if (!alive()) return;
       setShowSub(true);
       await wait(SUB_HOLD_MS);
