@@ -17,23 +17,18 @@ export default function MyBookingsPage() {
   const router = useRouter();
   const { loading, user } = useSession();
   const [bookings, setBookings] = useState(null);
-  const [reviewed, setReviewed] = useState(new Set());
   const [message, setMessage] = useState(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     const supabase = getSupabase();
-    const [b, r] = await Promise.all([
-      supabase
-        .from('bookings')
-        .select('id, status, note, created_at, trainer_id, slots(starts_at, ends_at, gyms(name)), trainers(profiles!trainers_id_fkey(full_name))')
-        .eq('client_id', user.id)
-        .order('created_at', { ascending: false }),
-      supabase.from('reviews').select('booking_id').eq('client_id', user.id),
-    ]);
-    const list = (b.data || []).sort((x, y) => new Date(y.slots?.starts_at) - new Date(x.slots?.starts_at));
+    const { data } = await supabase
+      .from('bookings')
+      .select('id, status, note, created_at, trainer_id, slots(starts_at, ends_at, gyms(name)), trainers(profiles!trainers_id_fkey(full_name))')
+      .eq('client_id', user.id)
+      .order('created_at', { ascending: false });
+    const list = (data || []).sort((x, y) => new Date(y.slots?.starts_at) - new Date(x.slots?.starts_at));
     setBookings(list);
-    setReviewed(new Set((r.data || []).map((x) => x.booking_id)));
   }, [user]);
 
   useEffect(() => {
@@ -90,8 +85,6 @@ export default function MyBookingsPage() {
       ) : (
         <ul className="booking-list">
           {past.map((b) => {
-            const canReview =
-              b.status === 'confirmed' && new Date(b.slots?.ends_at).getTime() < now && !reviewed.has(b.id);
             return (
               <li key={b.id} className="card booking-card column">
                 <div className="booking-card-top">
@@ -106,68 +99,11 @@ export default function MyBookingsPage() {
                     {b.status === 'confirmed' ? 'Odrađen' : STATUS_LABEL[b.status]}
                   </span>
                 </div>
-                {canReview && <ReviewForm bookingId={b.id} onDone={load} />}
-                {reviewed.has(b.id) && <p className="small muted">Hvala na oceni ✓</p>}
               </li>
             );
           })}
         </ul>
       )}
     </div>
-  );
-}
-
-function ReviewForm({ bookingId, onDone }) {
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e) {
-    e.preventDefault();
-    if (!rating) {
-      setError('Izaberi ocenu od 1 do 5 zvezdica.');
-      return;
-    }
-    setBusy(true);
-    const { error } = await getSupabase().rpc('add_review', {
-      p_booking_id: bookingId,
-      p_rating: rating,
-      p_comment: comment,
-    });
-    setBusy(false);
-    if (error) setError(errorMessage(error));
-    else onDone();
-  }
-
-  return (
-    <form className="review-form" onSubmit={submit}>
-      <span className="small">Oceni trening:</span>
-      <div className="star-input">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            type="button"
-            key={n}
-            className={n <= rating ? 'star on' : 'star'}
-            onClick={() => setRating(n)}
-            aria-label={`${n} zvezdica`}
-          >
-            ★
-          </button>
-        ))}
-      </div>
-      <textarea
-        className="input"
-        rows={2}
-        maxLength={1000}
-        placeholder="Komentar (nije obavezno)"
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-      />
-      {error && <p className="alert alert-error">{error}</p>}
-      <button className="btn btn-small btn-primary" disabled={busy}>
-        Pošalji ocenu
-      </button>
-    </form>
   );
 }

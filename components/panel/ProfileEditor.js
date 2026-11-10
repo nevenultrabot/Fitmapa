@@ -164,8 +164,16 @@ export default function ProfileEditor({ userId, profile, trainer, myGyms, onSave
           <input className="input" value={form.full_name} onChange={set('full_name')} required />
         </label>
         <label className="field">
-          <span>O meni (bio)</span>
-          <textarea className="input" rows={5} value={form.bio} onChange={set('bio')} placeholder="Ko si, kako radiš, sa kim najviše voliš da radiš…" />
+          <span>Bio</span>
+          <textarea
+            className="input"
+            rows={3}
+            maxLength={300}
+            value={form.bio}
+            onChange={set('bio')}
+            placeholder="Kratko, kao na Instagramu. Npr: Treniram ljude 8 godina 💪 Snaga · gubitak kilograma · prvi koraci u teretani"
+          />
+          <span className="small muted">{form.bio.length}/300 · prikazuje se odmah ispod tvog imena</span>
         </label>
         <label className="field">
           <span>Specijalnosti (odvoji zarezom)</span>
@@ -254,34 +262,154 @@ export default function ProfileEditor({ userId, profile, trainer, myGyms, onSave
 }
 
 function GymPicker({ userId, myGyms, onChanged }) {
-  const [allGyms, setAllGyms] = useState([]);
-  const [adding, setAdding] = useState(false);
-  const [newGym, setNewGym] = useState({ name: '', address: '' });
-  const [point, setPoint] = useState(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [editing, setEditing] = useState(null); // null | 'new' | gym
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
   const myIds = new Set(myGyms.map((g) => g.id));
 
-  async function loadGyms() {
-    const { data } = await getSupabase().from('gyms').select('id, name, address, lat, lng').order('name');
-    setAllGyms(data || []);
+  // Pretraga teretana po nazivu ili adresi (sa malim zakašnjenjem dok kucaš)
+  useEffect(() => {
+    const q = query.trim().replace(/[,()%*]/g, ' ');
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      const { data } = await getSupabase()
+        .from('gyms')
+        .select('id, name, address')
+        .or(`name.ilike.%${q}%,address.ilike.%${q}%`)
+        .order('name')
+        .limit(8);
+      setResults(data || []);
+      setSearching(false);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  async function add(gymId) {
+    setError('');
+    const { error } = await getSupabase().from('trainer_gyms').insert({ trainer_id: userId, gym_id: gymId });
+    if (error) setError(errorMessage(error));
+    setQuery('');
+    onChanged();
   }
 
-  useEffect(() => {
-    loadGyms();
-  }, []);
-
-  async function toggle(gymId) {
+  async function remove(gymId) {
     setError('');
-    const supabase = getSupabase();
-    const { error } = myIds.has(gymId)
-      ? await supabase.from('trainer_gyms').delete().eq('trainer_id', userId).eq('gym_id', gymId)
-      : await supabase.from('trainer_gyms').insert({ trainer_id: userId, gym_id: gymId });
+    const { error } = await getSupabase().from('trainer_gyms').delete().eq('trainer_id', userId).eq('gym_id', gymId);
     if (error) setError(errorMessage(error));
     onChanged();
   }
 
-  async function addGym(e) {
+  const canEdit = (g) => g.created_by === userId || !g.created_by;
+
+  return (
+    <section className="card">
+      <h2 className="section-title">Teretane u kojima radim</h2>
+      <p className="small muted">Klijenti te pronalaze preko ovih teretana na mapi.</p>
+
+      {myGyms.length > 0 ? (
+        <ul className="my-gyms">
+          {myGyms.map((g) => (
+            <li key={g.id}>
+              <span className="my-gyms-text">
+                <strong>{g.name}</strong>
+                {g.address && <span className="small muted">{g.address}</span>}
+              </span>
+              {canEdit(g) && (
+                <button className="btn btn-small btn-ghost" onClick={() => setEditing(g)}>
+                  Uredi
+                </button>
+              )}
+              <button className="btn btn-small btn-ghost" onClick={() => remove(g.id)} aria-label={`Ukloni ${g.name}`}>
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="alert alert-warn">Još nisi dodao nijednu teretanu — pronađi je ispod.</p>
+      )}
+
+      <div className="gym-search">
+        <input
+          className="input"
+          placeholder="Pronađi teretanu: upiši naziv ili ulicu…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {query.trim().length >= 2 && (
+          <ul className="gym-search-results">
+            {searching && results.length === 0 && <li className="muted small">Tražim…</li>}
+            {!searching && results.length === 0 && <li className="muted small">Nema teretane sa tim nazivom.</li>}
+            {results.map((g) => (
+              <li key={g.id}>
+                <button type="button" disabled={myIds.has(g.id)} onClick={() => add(g.id)}>
+                  <span>
+                    <strong>{g.name}</strong>
+                    {g.address && <span className="small muted"> · {g.address}</span>}
+                  </span>
+                  <span className="small">{myIds.has(g.id) ? 'Dodata ✓' : '+ Dodaj'}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {error && <p className="alert alert-error">{error}</p>}
+
+      {editing === null && (
+        <button className="link-btn" onClick={() => setEditing('new')}>
+          Moje teretane nema na listi — dodaj je
+        </button>
+      )}
+      {editing !== null && (
+        <GymForm
+          userId={userId}
+          gym={editing === 'new' ? null : editing}
+          onCancel={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            onChanged();
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+// Dodavanje nove ili izmena postojeće teretane
+function GymForm({ userId, gym, onCancel, onSaved }) {
+  const [f, setF] = useState({
+    name: gym?.name || '',
+    address: gym?.address || '',
+    opening_hours: gym?.opening_hours || '',
+    membership: gym?.membership || '',
+  });
+  const [image, setImage] = useState(gym?.image_url || null);
+  const [point, setPoint] = useState(gym ? { lat: gym.lat, lng: gym.lng } : null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+
+  async function onImage(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      setImage(await uploadPhoto(userId, file));
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+    setBusy(false);
+    e.target.value = '';
+  }
+
+  async function submit(e) {
     e.preventDefault();
     setError('');
     if (!point) {
@@ -290,65 +418,71 @@ function GymPicker({ userId, myGyms, onChanged }) {
     }
     setBusy(true);
     const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from('gyms')
-      .insert({ name: newGym.name.trim(), address: newGym.address.trim() || null, lat: point.lat, lng: point.lng, created_by: userId })
-      .select('id')
-      .single();
-    if (!error) await supabase.from('trainer_gyms').insert({ trainer_id: userId, gym_id: data.id });
-    setBusy(false);
-    if (error) {
-      setError(errorMessage(error));
-      return;
+    const values = {
+      name: f.name.trim(),
+      address: f.address.trim() || null,
+      opening_hours: f.opening_hours.trim(),
+      membership: f.membership.trim(),
+      image_url: image,
+      lat: point.lat,
+      lng: point.lng,
+    };
+    let err;
+    if (gym) {
+      ({ error: err } = await supabase.from('gyms').update(values).eq('id', gym.id));
+    } else {
+      const { data, error } = await supabase.from('gyms').insert({ ...values, created_by: userId }).select('id').single();
+      err = error;
+      if (!err) ({ error: err } = await supabase.from('trainer_gyms').insert({ trainer_id: userId, gym_id: data.id }));
     }
-    setAdding(false);
-    setNewGym({ name: '', address: '' });
-    setPoint(null);
-    loadGyms();
-    onChanged();
+    setBusy(false);
+    if (err) setError(errorMessage(err));
+    else onSaved();
   }
 
   return (
-    <section className="card">
-      <h2 className="section-title">Teretane u kojima radim</h2>
-      <p className="small muted">Klijenti te pronalaze preko ovih teretana na mapi.</p>
-      <div className="gym-checks">
-        {allGyms.map((g) => (
-          <label key={g.id} className={myIds.has(g.id) ? 'gym-check active' : 'gym-check'}>
-            <input type="checkbox" checked={myIds.has(g.id)} onChange={() => toggle(g.id)} />
-            <span>
-              <strong>{g.name}</strong>
-              {g.address && <span className="small muted"> · {g.address}</span>}
-            </span>
-          </label>
-        ))}
+    <form className="form add-gym" onSubmit={submit}>
+      <h3 className="sub-title">{gym ? `Uredi: ${gym.name}` : 'Nova teretana'}</h3>
+      <div className="gym-form-image">
+        {image ? <img src={image} alt="" /> : <span className="small muted">Bez slike</span>}
+        <label className="btn btn-small">
+          {busy ? 'Otpremam…' : image ? 'Promeni sliku' : 'Dodaj sliku'}
+          <input type="file" accept="image/*" hidden onChange={onImage} disabled={busy} />
+        </label>
       </div>
+      <div className="row">
+        <label className="field">
+          <span>Naziv teretane</span>
+          <input className="input" value={f.name} onChange={set('name')} required />
+        </label>
+        <label className="field">
+          <span>Tačna adresa</span>
+          <input className="input" value={f.address} onChange={set('address')} placeholder="Ulica i broj, Novi Sad" />
+        </label>
+      </div>
+      <label className="field">
+        <span>Radno vreme</span>
+        <input className="input" value={f.opening_hours} onChange={set('opening_hours')} placeholder="Pon–Pet 07–23h · Sub 09–21h · Ned 10–18h" />
+      </label>
+      <label className="field">
+        <span>Članarina</span>
+        <input className="input" value={f.membership} onChange={set('membership')} placeholder="Mesečna 4.000 RSD · Dnevna 500 RSD" />
+      </label>
+      <p className="small">{point ? '✓ Lokacija označena (klikni ponovo da je pomeriš)' : 'Klikni na mapu tačno gde je teretana:'}</p>
+      <MapView
+        gyms={[]}
+        onMapClick={setPoint}
+        pickedPoint={point}
+        center={point || undefined}
+        showLocate={false}
+        zoom={gym ? 15 : 13}
+        className="map-small"
+      />
       {error && <p className="alert alert-error">{error}</p>}
-
-      {!adding ? (
-        <button className="btn btn-small" onClick={() => setAdding(true)}>
-          + Moje teretane nema na listi
-        </button>
-      ) : (
-        <form className="form add-gym" onSubmit={addGym}>
-          <div className="row">
-            <label className="field">
-              <span>Naziv teretane</span>
-              <input className="input" value={newGym.name} onChange={(e) => setNewGym({ ...newGym, name: e.target.value })} required />
-            </label>
-            <label className="field">
-              <span>Adresa</span>
-              <input className="input" value={newGym.address} onChange={(e) => setNewGym({ ...newGym, address: e.target.value })} placeholder="Ulica i broj" />
-            </label>
-          </div>
-          <p className="small">{point ? '✓ Lokacija označena (klikni ponovo da je pomeriš)' : 'Klikni na mapu tačno gde je teretana:'}</p>
-          <MapView gyms={allGyms} onMapClick={setPoint} pickedPoint={point} showLocate={false} zoom={13} className="map-small" />
-          <div className="modal-actions">
-            <button className="btn btn-primary" disabled={busy}>{busy ? 'Dodajem…' : 'Dodaj teretanu'}</button>
-            <button type="button" className="btn" onClick={() => setAdding(false)}>Odustani</button>
-          </div>
-        </form>
-      )}
-    </section>
+      <div className="modal-actions">
+        <button className="btn btn-primary" disabled={busy}>{busy ? 'Čuvam…' : gym ? 'Sačuvaj teretanu' : 'Dodaj teretanu'}</button>
+        <button type="button" className="btn" onClick={onCancel}>Odustani</button>
+      </div>
+    </form>
   );
 }

@@ -29,7 +29,7 @@ export default function TrainerPanelPage() {
     if (!user) return;
     const { data } = await getSupabase()
       .from('trainers')
-      .select('*, trainer_gyms(gyms(id, name, address, lat, lng))')
+      .select('*, trainer_gyms(gyms(id, name, address, lat, lng, image_url, opening_hours, membership, created_by))')
       .eq('id', user.id)
       .maybeSingle();
     setTrainer(data);
@@ -70,7 +70,7 @@ export default function TrainerPanelPage() {
     <div className="page">
       <div className="panel-head">
         <div>
-          <h1>Zdravo, {profile.full_name?.split(' ')[0] || 'treneru'}</h1>
+          <h1>{profile.full_name || 'Moj profil'}</h1>
           <p className="muted small">
             {trainer.is_published ? (
               <>

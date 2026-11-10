@@ -2,7 +2,7 @@
 
 Mapa teretana u Novom Sadu → personalni treneri → zakazivanje termina.
 
-- **Vežbač:** vidi mapu, bira teretanu, otvara profil trenera, zakazuje slobodan termin (odmah potvrđen), otkazuje, ocenjuje posle treninga.
+- **Vežbač:** vidi mapu ili liste trenera i teretana, otvara profil trenera, zakazuje slobodan termin (odmah potvrđen) i otkazuje.
 - **Trener:** pravi profil (bio, slike, cena, WhatsApp/Viber/Instagram), bira teretane, pravi termine za više dana odjednom, blokira termine ili cele dane, vidi ko je zakazao, otkazuje.
 - Svi vide da je termin **„Zauzeto”**, a ime i telefon klijenta vidi **samo trener**. To pravilo je u samoj bazi.
 - Plaćanje je na licu mesta, nema ga u aplikaciji.
@@ -18,7 +18,7 @@ Tehnologije: Next.js (web aplikacija koja radi i na telefonu), Supabase (baza, n
 2. Levo izaberi **SQL Editor**, pa **New query**.
 3. Otvori fajl `supabase/schema.sql`, kopiraj **ceo** sadržaj, nalepi ga i klikni **Run**.
    Treba da piše *Success. No rows returned*. Pokreće se **samo jednom**.
-   Zatim isto uradi i sa fajlom `supabase/002_nedeljni_raspored.sql` (nedeljni raspored).
+   Zatim isto, redom, uradi i sa fajlovima `supabase/002_nedeljni_raspored.sql` i `supabase/003_teretane_bez_recenzija.sql`.
 4. Levo izaberi **Authentication**, pa **URL Configuration**:
    - **Site URL:** za sada ostavi kako jeste. Posle koraka 3 tu upisuješ adresu sa Vercela (npr. `https://fitmapa.vercel.app`).
 5. Za brže testiranje možeš privremeno isključiti potvrdu emaila:

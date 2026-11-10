@@ -413,3 +413,187 @@ textarea.input { resize: vertical; }
   .slot-row-time { width: 52px; }
   .slot-row-actions { width: auto; flex-direction: column; align-items: flex-end; }
 }
+
+/* =====================================================================
+   v3 — logo, uvod, navigacija, stranice Treneri/Teretane, novi profil
+   ===================================================================== */
+
+/* Logo */
+.logo-full { display: inline-flex; align-items: center; gap: 8px; }
+.logo-word { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.03em; color: #fff; }
+.logo-word-accent { color: var(--accent); }
+.logo-dot { display: none; }
+
+/* Navigacija */
+.header { gap: 16px; }
+.nav { flex: 1; justify-content: space-between; }
+.nav-pages, .nav-account { display: flex; align-items: center; gap: 2px; }
+.nav-pages { margin-left: 18px; }
+.nav-link { color: rgba(255, 255, 255, 0.75); }
+.nav-link:hover { color: #fff; }
+.nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.nav-pages .nav-link.active { box-shadow: inset 0 -2px 0 var(--accent); border-radius: 8px 8px 0 0; background: transparent; }
+.nav-toggle { display: none; margin-left: auto; background: none; border: 0; color: #fff; padding: 6px; }
+@media (max-width: 720px) {
+  .nav-toggle { display: inline-flex; }
+  .nav {
+    display: none; position: fixed; top: var(--header); left: 0; right: 0; z-index: 60;
+    flex-direction: column; align-items: stretch; gap: 8px;
+    background: var(--ink); padding: 8px 16px 18px; box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  }
+  .nav.open { display: flex; }
+  .nav-pages, .nav-account { flex-direction: column; align-items: stretch; margin: 0; gap: 2px; }
+  .nav-account { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 8px; }
+  .nav .nav-link { padding: 12px; font-size: 1.05rem; text-align: left; }
+  .nav-pages .nav-link.active { box-shadow: inset 3px 0 0 var(--accent); border-radius: 0; }
+  .nav-account .btn { justify-content: center; padding: 12px; }
+}
+
+/* Uvodna animacija */
+.intro {
+  position: fixed; inset: 0; z-index: 200; background: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  animation: intro-bg 2.3s ease forwards;
+}
+.intro-logo {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  animation: intro-shrink 0.7s cubic-bezier(0.6, 0, 0.3, 1) 1.55s forwards;
+}
+.intro-mark { animation: intro-spin 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both; filter: drop-shadow(0 0 30px rgba(200, 240, 60, 0.35)); }
+.intro-word {
+  font-size: 2.6rem; font-weight: 800; letter-spacing: -0.04em; color: #fff;
+  animation: intro-up 0.5s ease 0.75s both;
+}
+.intro-tag { color: rgba(255, 255, 255, 0.6); font-weight: 600; animation: intro-up 0.5s ease 1s both; }
+@keyframes intro-spin {
+  0% { transform: scale(0.2) rotate(-540deg); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes intro-up { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes intro-shrink {
+  to { transform: translate(calc(-50vw + 70px), calc(-50vh + 28px)) scale(0.22); opacity: 0; }
+}
+@keyframes intro-bg { 0%, 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+
+/* Veći avatar */
+.avatar-xl { width: 132px; height: 132px; box-shadow: 0 0 0 4px #fff, 0 0 0 6px var(--accent); }
+.avatar-xl.avatar-empty { font-size: 2.6rem; }
+@media (max-width: 520px) { .avatar-xl { width: 104px; height: 104px; } .avatar-xl.avatar-empty { font-size: 2rem; } }
+
+/* Profil trenera — zaglavlje u stilu Instagrama */
+.hero2 { padding: 24px; }
+.hero2-top { display: flex; gap: 24px; align-items: center; }
+.hero2-info { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.hero2-info .profile-name { margin: 0; }
+.hero2-info .chips { margin: 0; }
+.hero2-bio { white-space: pre-wrap; font-size: 1.02rem; margin: 18px 0 0; max-width: 62ch; }
+.hero2-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.hero2-stats > div { display: flex; flex-direction: column; align-items: center; padding: 12px 6px; text-align: center; }
+.hero2-stats > div + div { border-left: 1px solid var(--line); }
+.hero2-stats strong { font-size: 1.15rem; font-weight: 800; }
+.hero2-stats span { font-size: 0.8rem; color: var(--muted); }
+.hero2-extra { margin-top: 12px; font-size: 0.9rem; }
+.hero2-extra p { margin: 4px 0; }
+@media (max-width: 520px) {
+  .hero2 { padding: 18px 16px; }
+  .hero2-top { gap: 16px; align-items: flex-start; }
+  .hero2-stats strong { font-size: 1rem; }
+}
+
+/* Ikonice za kontakt */
+.contact-icons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.contact-icon {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.25rem; color: #fff; background: var(--ink);
+  transition: transform 0.12s, filter 0.12s;
+}
+.contact-icon:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.ci-wa { background: #25d366; }
+.ci-viber { background: #7360f2; }
+.ci-ig { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
+.ci-tel { background: var(--ink); font-size: 1.05rem; }
+.ci-mail { background: #5b6170; font-size: 1.05rem; }
+
+/* Teretane: slika ili zamena */
+.gym-cover-img { object-fit: cover; }
+.gym-cover-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: radial-gradient(circle at 20% 20%, #2b3038, var(--ink));
+  color: rgba(255, 255, 255, 0.85); font-weight: 700; text-align: center; padding: 8px;
+}
+.gym-thumb.gym-cover-empty span { display: none; }
+.gym-thumb.gym-cover-empty svg { width: 26px; height: 26px; }
+.gym-thumb { width: 52px; height: 52px; border-radius: 12px; overflow: hidden; }
+.gym-details-cover { width: 100%; height: 170px; border-radius: 14px; margin-bottom: 14px; display: flex; }
+img.gym-details-cover { display: block; }
+.gym-facts { list-style: none; padding: 0; margin: 10px 0 14px; display: flex; flex-direction: column; gap: 8px; }
+.gym-facts li { display: flex; gap: 10px; align-items: flex-start; }
+.gym-facts svg { flex: none; margin-top: 4px; color: var(--muted); }
+.gym-facts-link { display: block; color: var(--muted); }
+.gym-page-link { display: inline-block; font-weight: 700; margin-bottom: 14px; }
+
+/* Stranice Treneri i Teretane */
+.page-head { margin-bottom: 16px; }
+.page-head h1 { font-size: 2rem; margin-bottom: 4px; }
+.page-head p { margin: 0; }
+.search-box {
+  display: flex; align-items: center; gap: 10px; background: #fff;
+  border: 1px solid var(--line); border-radius: 14px; padding: 0 14px; margin-bottom: 12px;
+}
+.search-box:focus-within { outline: 2px solid var(--ink); }
+.search-box svg { color: var(--muted); flex: none; }
+.search-box input { flex: 1; border: 0; outline: 0; padding: 13px 0; font: inherit; background: transparent; min-width: 0; }
+.filter-chips { margin-bottom: 18px; }
+
+.gym-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.gym-card {
+  display: flex; flex-direction: column; background: #fff; border: 1px solid var(--line);
+  border-radius: 16px; overflow: hidden; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+}
+.gym-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.gym-card-cover { width: 100%; height: 170px; display: flex; }
+.gym-card-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.gym-card-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 1.05rem; }
+.gym-card-line { display: flex; gap: 8px; align-items: flex-start; font-size: 0.88rem; color: #3d4148; }
+.gym-card-line svg { flex: none; margin-top: 3px; color: var(--muted); }
+
+.trainer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 16px; }
+.trainer-tile {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
+  background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 22px 16px 16px;
+  text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+}
+.trainer-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.trainer-tile .avatar { margin-bottom: 10px; }
+.trainer-tile-name { font-size: 1.1rem; }
+.trainer-tile-foot { margin-top: auto; padding-top: 10px; width: 100%; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.trainer-tile-price { font-weight: 800; }
+
+.gym-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 900px) { .gym-page { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; } .gym-page-side { position: sticky; top: calc(var(--header) + 16px); } }
+.gym-page-map { padding: 8px; }
+.gym-page-map .map-small { height: 320px; }
+
+/* Panel: moje teretane + pretraga */
+.my-gyms { list-style: none; padding: 0; margin: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+.my-gyms li { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border: 1px solid var(--ink); border-radius: 12px; background: #fbfdf2; }
+.my-gyms-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gym-search { position: relative; margin-bottom: 10px; }
+.gym-search-results {
+  list-style: none; margin: 6px 0 0; padding: 6px; border: 1px solid var(--line);
+  border-radius: 12px; background: #fff; box-shadow: var(--shadow);
+}
+.gym-search-results li.muted { padding: 8px 10px; }
+.gym-search-results button {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 10px; border: 0; background: none; border-radius: 8px; text-align: left;
+}
+.gym-search-results button:hover:not(:disabled) { background: var(--bg); }
+.gym-search-results button > .small { font-weight: 700; white-space: nowrap; }
+.gym-form-image { display: flex; align-items: center; gap: 12px; }
+.gym-form-image img { width: 120px; height: 80px; object-fit: cover; border-radius: 10px; }

@@ -7,17 +7,8 @@ import Avatar from '@/components/Avatar';
 import { getSupabase, errorMessage } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
 import { useWeek } from '@/lib/useWeek';
-import {
-  averageRating,
-  dayKey,
-  formatDateTime,
-  formatPrice,
-  formatTime,
-  instagramLink,
-  stars,
-  viberLink,
-  whatsappLink,
-} from '@/lib/format';
+import ContactButtons from '@/components/ContactButtons';
+import { dayKey, formatDateTime, formatPrice, formatTime } from '@/lib/format';
 
 export default function TrainerProfilePage() {
   const { id } = useParams();
@@ -26,7 +17,6 @@ export default function TrainerProfilePage() {
   const week = useWeek();
 
   const [trainer, setTrainer] = useState(undefined);
-  const [reviews, setReviews] = useState([]);
   const [slots, setSlots] = useState([]);
   const [activeDay, setActiveDay] = useState(null);
   const [gymFilter, setGymFilter] = useState('all');
@@ -48,17 +38,12 @@ export default function TrainerProfilePage() {
 
   useEffect(() => {
     const supabase = getSupabase();
-    Promise.all([
-      supabase
-        .from('trainers')
-        .select('*, profiles!trainers_id_fkey(full_name), trainer_gyms(gyms(id, name, address))')
-        .eq('id', id)
-        .maybeSingle(),
-      supabase.from('reviews').select('*').eq('trainer_id', id).order('created_at', { ascending: false }),
-    ]).then(([t, r]) => {
-      setTrainer(t.data || null);
-      setReviews(r.data || []);
-    });
+    supabase
+      .from('trainers')
+      .select('*, profiles!trainers_id_fkey(full_name), trainer_gyms(gyms(id, name, address))')
+      .eq('id', id)
+      .maybeSingle()
+      .then(({ data }) => setTrainer(data || null));
   }, [id]);
 
   useEffect(() => {
@@ -93,7 +78,6 @@ export default function TrainerProfilePage() {
   const currentKey = activeDay || firstUseful?.key;
   const currentDay = week?.days.find((d) => d.key === currentKey);
   const daySlots = byDay[currentKey] || [];
-  const rating = averageRating(reviews);
   const isOwn = user?.id === id;
 
   if (trainer === undefined) return <div className="page"><p className="muted">Učitavam…</p></div>;
@@ -106,14 +90,6 @@ export default function TrainerProfilePage() {
     );
 
   const name = trainer.profiles?.full_name || 'Trener';
-  const contacts = [
-    trainer.whatsapp && { label: 'WhatsApp', href: whatsappLink(trainer.whatsapp), cls: 'c-wa' },
-    trainer.viber && { label: 'Viber', href: viberLink(trainer.viber), cls: 'c-viber' },
-    trainer.instagram && { label: 'Instagram', href: instagramLink(trainer.instagram), cls: 'c-ig' },
-    trainer.contact_phone && { label: 'Pozovi', href: `tel:${trainer.contact_phone}`, cls: '' },
-    trainer.contact_email && { label: 'Email', href: `mailto:${trainer.contact_email}`, cls: '' },
-  ].filter((c) => c && c.href);
-
   function pickSlot(slot) {
     if (!user) {
       router.push(`/prijava?next=/trener/${id}`);
@@ -132,22 +108,12 @@ export default function TrainerProfilePage() {
         </p>
       )}
 
-      {/* ZAGLAVLJE */}
-      <section className="hero card">
-        <div className="hero-main">
-          <Avatar url={trainer.avatar_url} name={name} size="lg" />
-          <div className="hero-text">
+      {/* ZAGLAVLJE — kao profil na Instagramu */}
+      <section className="card hero2">
+        <div className="hero2-top">
+          <Avatar url={trainer.avatar_url} name={name} size="xl" />
+          <div className="hero2-info">
             <h1 className="profile-name">{name}</h1>
-            <p className="hero-meta">
-              {rating ? (
-                <>
-                  <span className="stars">{stars(rating)}</span> {rating.toFixed(1)} · {reviews.length} ocena
-                </>
-              ) : (
-                <span className="muted">Još nema ocena</span>
-              )}
-              {trainer.years_experience !== null && <span className="muted"> · {trainer.years_experience} god. iskustva</span>}
-            </p>
             {trainer.specialties?.length > 0 && (
               <div className="chips">
                 {trainer.specialties.map((s) => (
@@ -155,20 +121,37 @@ export default function TrainerProfilePage() {
                 ))}
               </div>
             )}
+            <ContactButtons trainer={trainer} />
           </div>
         </div>
-        <div className="hero-side">
-          <span className="small muted">Cena po treningu</span>
-          <span className="price">{formatPrice(trainer.price_per_session) || 'Po dogovoru'}</span>
-          {trainer.price_note && <span className="small prewrap">{trainer.price_note}</span>}
+
+        {trainer.bio && <p className="hero2-bio">{trainer.bio}</p>}
+
+        <div className="hero2-stats">
+          <div>
+            <strong>{formatPrice(trainer.price_per_session) || 'Dogovor'}</strong>
+            <span>po treningu</span>
+          </div>
+          {trainer.years_experience !== null && (
+            <div>
+              <strong>{trainer.years_experience} god.</strong>
+              <span>iskustva</span>
+            </div>
+          )}
+          <div>
+            <strong>{gyms.length}</strong>
+            <span>{gyms.length === 1 ? 'teretana' : 'teretane'}</span>
+          </div>
         </div>
-        {contacts.length > 0 && (
-          <div className="contact-row">
-            {contacts.map((c) => (
-              <a key={c.label} href={c.href} target="_blank" rel="noopener noreferrer" className={`btn btn-contact ${c.cls}`}>
-                {c.label}
-              </a>
-            ))}
+
+        {(trainer.price_note || trainer.certificates) && (
+          <div className="hero2-extra">
+            {trainer.price_note && <p className="prewrap">{trainer.price_note}</p>}
+            {trainer.certificates && (
+              <p className="prewrap muted">
+                <strong>Sertifikati:</strong> {trainer.certificates}
+              </p>
+            )}
           </div>
         )}
       </section>
@@ -255,19 +238,6 @@ export default function TrainerProfilePage() {
             )}
           </section>
 
-          {(trainer.bio || trainer.certificates) && (
-            <section className="card">
-              <h2 className="section-title">O meni</h2>
-              {trainer.bio && <p className="prewrap">{trainer.bio}</p>}
-              {trainer.certificates && (
-                <>
-                  <h3 className="sub-title">Sertifikati</h3>
-                  <p className="prewrap">{trainer.certificates}</p>
-                </>
-              )}
-            </section>
-          )}
-
           {trainer.photos?.length > 0 && (
             <section className="card">
               <h2 className="section-title">Galerija</h2>
@@ -281,24 +251,6 @@ export default function TrainerProfilePage() {
             </section>
           )}
 
-          <section className="card">
-            <h2 className="section-title">Ocene klijenata</h2>
-            {reviews.length === 0 ? (
-              <p className="muted">Još nema ocena. Ocenu može ostaviti samo klijent posle odrađenog treninga.</p>
-            ) : (
-              <ul className="reviews">
-                {reviews.map((r) => (
-                  <li key={r.id}>
-                    <div className="review-head">
-                      <strong>{r.client_name || 'Klijent'}</strong>
-                      <span className="stars">{stars(r.rating)}</span>
-                    </div>
-                    {r.comment && <p>{r.comment}</p>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
         </div>
 
         <aside className="profile-side">
@@ -308,7 +260,9 @@ export default function TrainerProfilePage() {
               <ul className="plain-list">
                 {gyms.map((g) => (
                   <li key={g.id}>
-                    <strong>{g.name}</strong>
+                    <Link href={`/teretane/${g.id}`}>
+                      <strong>{g.name}</strong>
+                    </Link>
                     {g.address && <div className="small muted">{g.address}</div>}
                   </li>
                 ))}

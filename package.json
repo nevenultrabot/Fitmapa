@@ -12,6 +12,7 @@
     "maplibre-gl": "^5.0.0",
     "next": "^16.0.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-icons": "^5.4.0"
   }
 }
