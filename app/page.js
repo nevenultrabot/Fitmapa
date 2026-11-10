@@ -81,7 +81,12 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <h1 className="sheet-title">Teretane</h1>
+              <div className="sheet-title-row">
+                <h1 className="sheet-title">Teretane</h1>
+                <button className="link-btn" onClick={() => window.dispatchEvent(new Event('fitmapa:intro'))}>
+                  Kako funkcioniše?
+                </button>
+              </div>
               <p className="muted small">Izaberi teretanu na mapi ili sa liste da vidiš njene personalne trenere.</p>
               <input
                 className="input"
