@@ -319,3 +319,97 @@ textarea.input { resize: vertical; }
 .slot .small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tab { white-space: nowrap; }
 @media (max-width: 520px) { .tab { font-size: 0.88rem; padding: 9px 6px; } }
+
+/* =====================================================================
+   v2 — nedeljni raspored i novi izgled profila
+   ===================================================================== */
+
+/* Sadržaj više ne može da "pobegne" udesno */
+.profile-grid { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .profile-grid { grid-template-columns: minmax(0, 1fr) 280px; } }
+.profile-main, .profile-side { min-width: 0; }
+.page { width: 100%; }
+
+/* Zaglavlje profila */
+.hero { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 22px; }
+.hero-main { display: flex; gap: 18px; align-items: center; min-width: 0; }
+.hero-text { min-width: 0; }
+.hero-meta { margin: 0 0 4px; }
+.hero-side {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 14px 16px; border-radius: 12px; background: var(--bg);
+}
+.hero .contact-row { margin: 0; }
+.hero .chips { margin-bottom: 0; }
+@media (min-width: 720px) {
+  .hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .hero-side { min-width: 200px; text-align: right; }
+  .hero .contact-row { grid-column: 1 / -1; }
+}
+.sub-title { font-size: 0.95rem; font-weight: 800; margin: 14px 0 4px; }
+
+/* Nedeljni kalendar: 7 kolona, bez skrolovanja */
+.cal-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.cal-head .section-title { margin: 0; }
+.week-strip, .week-pick { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
+.week-day {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 8px 2px; border-radius: 12px; border: 1px solid var(--line); background: #fff;
+  min-width: 0;
+}
+.week-day:hover:not(:disabled) { border-color: var(--ink); }
+.week-day-name { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.week-day-num { font-size: 1.15rem; font-weight: 800; line-height: 1.2; }
+.week-day-count { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+.week-day.has-free .week-day-count { color: var(--ok); }
+.week-day.past { opacity: 0.35; background: transparent; }
+.week-day.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.week-day.active .week-day-name, .week-day.active .week-day-count { color: var(--accent); }
+.week-pick .week-day.active { background: var(--accent); border-color: var(--accent-strong); color: var(--ink); }
+.week-pick .week-day.active .week-day-name { color: var(--ink); }
+.day-title { font-weight: 700; text-transform: capitalize; margin: 4px 0 10px; }
+.empty-note { background: var(--bg); border-radius: 10px; padding: 14px; color: var(--muted); margin: 0 0 12px; }
+.slot-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+
+/* Panel trenera */
+.week-banner {
+  background: var(--ink); color: #fff; border-radius: var(--radius);
+  padding: 16px 18px; margin-bottom: 16px;
+}
+.week-banner > div { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.week-banner-range { color: var(--accent); font-weight: 700; }
+.week-banner p { margin: 6px 0 0; opacity: 0.8; }
+.empty-week { text-align: center; padding: 28px 18px; }
+.empty-week p { margin: 4px 0 0; }
+.week-list { display: flex; flex-direction: column; }
+.day-past {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 10px 16px; margin-bottom: 8px; border-radius: 12px;
+  border: 1px dashed var(--line); color: var(--muted);
+}
+.day-past-name { text-transform: capitalize; font-weight: 600; }
+.day-card.is-today { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.day-card-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.day-empty { margin: 10px 0 0; }
+.preset-row { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.link-btn { background: none; border: 0; padding: 0; font-weight: 700; font-size: 0.85rem; text-decoration: underline; text-underline-offset: 3px; color: var(--muted); }
+.link-btn:hover { color: var(--ink); }
+.estimate { background: var(--bg); border-radius: 10px; padding: 10px 14px; margin: 0; font-size: 0.92rem; }
+
+@media (max-width: 520px) {
+  .hero { padding: 16px; }
+  .week-strip, .week-pick { gap: 4px; }
+  .week-day { padding: 7px 0; border-radius: 10px; }
+  .week-day-num { font-size: 1rem; }
+  .day-card-head h3 { width: 100%; }
+}
+
+/* samo prvo slovo veliko ("Sreda, 11. novembar") */
+.day-title, .day-card-head h3, .day-past-name { text-transform: none; }
+.day-title::first-letter, .day-card-head h3::first-letter, .day-past-name::first-letter { text-transform: uppercase; }
+/* na telefonu dugmad ostaju u istom redu sa terminom */
+@media (max-width: 520px) {
+  .slot-row { flex-wrap: nowrap; align-items: flex-start; }
+  .slot-row-time { width: 52px; }
+  .slot-row-actions { width: auto; flex-direction: column; align-items: flex-end; }
+}

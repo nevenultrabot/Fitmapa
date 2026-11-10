@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
+import { useWeek } from '@/lib/useWeek';
 import Schedule from '@/components/panel/Schedule';
 import AddSlots from '@/components/panel/AddSlots';
 import ProfileEditor from '@/components/panel/ProfileEditor';
@@ -18,7 +19,9 @@ const TABS = [
 export default function TrainerPanelPage() {
   const router = useRouter();
   const { loading, user, profile } = useSession();
+  const week = useWeek();
   const [tab, setTab] = useState('schedule');
+  const [presetDay, setPresetDay] = useState(null);
   const [trainer, setTrainer] = useState(null);
   const [myGyms, setMyGyms] = useState([]);
 
@@ -95,15 +98,34 @@ export default function TrainerPanelPage() {
 
       <div className="tabs tabs-wide">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'tab active' : 'tab'} onClick={() => setTab(t.id)}>
+          <button key={t.id} className={tab === t.id ? 'tab active' : 'tab'} onClick={() => {
+              setPresetDay(null);
+              setTab(t.id);
+            }}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'schedule' && <Schedule userId={user.id} onAddClick={() => setTab('add')} />}
-      {tab === 'add' && (
-        <AddSlots gyms={myGyms} onDone={() => setTab('schedule')} onNeedGym={() => setTab('profile')} />
+      {tab === 'schedule' && (
+        <Schedule
+          userId={user.id}
+          week={week}
+          onAddClick={(iso) => {
+            setPresetDay(iso || null);
+            setTab('add');
+          }}
+        />
+      )}
+      {tab === 'add' && !week && <p className="muted">Učitavam…</p>}
+      {tab === 'add' && week && (
+        <AddSlots
+          gyms={myGyms}
+          week={week}
+          presetDay={presetDay}
+          onDone={() => setTab('schedule')}
+          onNeedGym={() => setTab('profile')}
+        />
       )}
       {tab === 'profile' && (
         <ProfileEditor userId={user.id} profile={profile} trainer={trainer} myGyms={myGyms} onSaved={loadTrainer} />

@@ -2,35 +2,18 @@
 
 import { useMemo, useState } from 'react';
 import { getSupabase, errorMessage } from '@/lib/supabase';
-import { dayKey } from '@/lib/format';
-
-const WEEKDAYS = [
-  { n: 1, label: 'Pon' },
-  { n: 2, label: 'Uto' },
-  { n: 3, label: 'Sre' },
-  { n: 4, label: 'Čet' },
-  { n: 5, label: 'Pet' },
-  { n: 6, label: 'Sub' },
-  { n: 7, label: 'Ned' },
-];
-
-function addDays(key, days) {
-  const d = new Date(key + 'T12:00:00');
-  d.setDate(d.getDate() + days);
-  return dayKey(d);
-}
 
 function toMinutes(t) {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
 
-export default function AddSlots({ gyms, onDone, onNeedGym }) {
-  const today = dayKey(new Date());
+export default function AddSlots({ gyms, week, presetDay, onDone, onNeedGym }) {
+  const openDays = (week?.days || []).filter((d) => !d.past).map((d) => d.iso);
   const [gymId, setGymId] = useState(gyms[0]?.id || '');
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(addDays(today, 27));
-  const [weekdays, setWeekdays] = useState([1, 2, 3, 4, 5]);
+  const [weekdays, setWeekdays] = useState(() =>
+    presetDay ? [presetDay] : openDays.filter((n) => n <= 5).length ? openDays.filter((n) => n <= 5) : openDays
+  );
   const [start, setStart] = useState('17:00');
   const [end, setEnd] = useState('21:00');
   const [minutes, setMinutes] = useState(60);
@@ -42,18 +25,6 @@ export default function AddSlots({ gyms, onDone, onNeedGym }) {
     return diff > 0 ? Math.floor(diff / minutes) : 0;
   }, [start, end, minutes]);
 
-  const estimate = useMemo(() => {
-    if (!from || !to || to < from) return 0;
-    let count = 0;
-    let key = from;
-    for (let i = 0; i < 100 && key <= to; i++) {
-      const iso = ((new Date(key + 'T12:00:00').getDay() + 6) % 7) + 1;
-      if (weekdays.includes(iso)) count++;
-      key = addDays(key, 1);
-    }
-    return count * perDay;
-  }, [from, to, weekdays, perDay]);
-
   if (gyms.length === 0) {
     return (
       <div className="card">
@@ -62,24 +33,27 @@ export default function AddSlots({ gyms, onDone, onNeedGym }) {
       </div>
     );
   }
+  if (!week) return <p className="muted">Učitavam…</p>;
+
+  const selected = weekdays.filter((n) => openDays.includes(n));
+  const estimate = selected.length * perDay;
 
   function toggleDay(n) {
     setWeekdays((w) => (w.includes(n) ? w.filter((x) => x !== n) : [...w, n].sort()));
   }
+  const preset = (list) => setWeekdays(list.filter((n) => openDays.includes(n)));
 
   async function submit(e) {
     e.preventDefault();
     setMessage(null);
-    if (weekdays.length === 0) {
-      setMessage({ type: 'error', text: 'Izaberi bar jedan dan u nedelji.' });
+    if (selected.length === 0) {
+      setMessage({ type: 'error', text: 'Izaberi bar jedan dan.' });
       return;
     }
     setBusy(true);
     const { data, error } = await getSupabase().rpc('create_slots', {
       p_gym_id: gymId,
-      p_from: from,
-      p_to: to,
-      p_weekdays: weekdays,
+      p_weekdays: selected,
       p_start: start,
       p_end: end,
       p_minutes: Number(minutes),
@@ -88,19 +62,22 @@ export default function AddSlots({ gyms, onDone, onNeedGym }) {
     if (error) {
       setMessage({ type: 'error', text: errorMessage(error) });
     } else if (data === 0) {
-      setMessage({ type: 'warn', text: 'Nije napravljen nijedan novi termin — možda već postoje u tom vremenu ili su u prošlosti.' });
+      setMessage({ type: 'warn', text: 'Nije napravljen nijedan novi termin — već postoje u tom vremenu ili je to vreme prošlo.' });
     } else {
-      setMessage({ type: 'ok', text: `Napravljeno ${data} termina. Sada su vidljivi klijentima.` });
+      setMessage({ type: 'ok', text: `Napravljeno ${data} termina. Klijenti ih već vide.` });
       setTimeout(onDone, 1200);
     }
   }
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h2 className="section-title">Napravi termine za više dana odjednom</h2>
-      <p className="small muted">
-        Primer: ponedeljak–petak od 17 do 21h, po 60 minuta = 4 termina dnevno. Termini koji se preklapaju sa postojećim se preskaču.
-      </p>
+      <div>
+        <h2 className="section-title">Dodaj termine za ovu nedelju</h2>
+        <p className="small muted">
+          {week.range}. Izaberi dane i radno vreme — termini se prave sami. Za drugačije vreme po danima (npr. subotom ujutru)
+          dodaj ih u dva navrata.
+        </p>
+      </div>
 
       <label className="field">
         <span>Teretana</span>
@@ -111,40 +88,37 @@ export default function AddSlots({ gyms, onDone, onNeedGym }) {
         </select>
       </label>
 
-      <div className="row">
-        <label className="field">
-          <span>Od datuma</span>
-          <input className="input" type="date" value={from} min={today} onChange={(e) => setFrom(e.target.value)} required />
-        </label>
-        <label className="field">
-          <span>Do datuma</span>
-          <input className="input" type="date" value={to} min={from} max={addDays(from, 92)} onChange={(e) => setTo(e.target.value)} required />
-        </label>
-      </div>
-
       <fieldset className="field">
-        <legend>Dani u nedelji</legend>
-        <div className="weekday-pick">
-          {WEEKDAYS.map((d) => (
+        <legend>Dani</legend>
+        <div className="week-pick">
+          {week.days.map((d) => (
             <button
               type="button"
-              key={d.n}
-              className={weekdays.includes(d.n) ? 'chip chip-btn active' : 'chip chip-btn'}
-              onClick={() => toggleDay(d.n)}
+              key={d.key}
+              disabled={d.past}
+              className={selected.includes(d.iso) ? 'week-day active' : 'week-day'}
+              onClick={() => toggleDay(d.iso)}
             >
-              {d.label}
+              <span className="week-day-name">{d.short}</span>
+              <span className="week-day-num">{d.num}</span>
             </button>
           ))}
+        </div>
+        <div className="preset-row">
+          <button type="button" className="link-btn" onClick={() => preset([1, 2, 3, 4, 5])}>Radni dani</button>
+          <button type="button" className="link-btn" onClick={() => preset([6, 7])}>Vikend</button>
+          <button type="button" className="link-btn" onClick={() => preset([1, 2, 3, 4, 5, 6, 7])}>Svi preostali</button>
+          <button type="button" className="link-btn" onClick={() => setWeekdays([])}>Poništi</button>
         </div>
       </fieldset>
 
       <div className="row">
         <label className="field">
-          <span>Početak</span>
+          <span>Od</span>
           <input className="input" type="time" step="900" value={start} onChange={(e) => setStart(e.target.value)} required />
         </label>
         <label className="field">
-          <span>Kraj</span>
+          <span>Do</span>
           <input className="input" type="time" step="900" value={end} onChange={(e) => setEnd(e.target.value)} required />
         </label>
         <label className="field">
@@ -157,8 +131,9 @@ export default function AddSlots({ gyms, onDone, onNeedGym }) {
         </label>
       </div>
 
-      <p className="small">
-        Biće napravljeno oko <strong>{estimate}</strong> termina ({perDay} dnevno).
+      <p className="estimate">
+        Biće napravljeno do <strong>{estimate}</strong> termina · {perDay} dnevno × {selected.length}{' '}
+        {selected.length === 1 ? 'dan' : 'dana'}
       </p>
 
       {message && <p className={`alert alert-${message.type}`}>{message.text}</p>}

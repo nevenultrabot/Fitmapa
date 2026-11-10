@@ -6,25 +6,24 @@ import { useParams, useRouter } from 'next/navigation';
 import Avatar from '@/components/Avatar';
 import { getSupabase, errorMessage } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
+import { useWeek } from '@/lib/useWeek';
 import {
   averageRating,
+  dayKey,
   formatDateTime,
-  formatDayShort,
   formatPrice,
   formatTime,
-  groupByDay,
   instagramLink,
   stars,
   viberLink,
   whatsappLink,
 } from '@/lib/format';
 
-const DAYS_AHEAD = 21;
-
 export default function TrainerProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const { user } = useSession();
+  const week = useWeek();
 
   const [trainer, setTrainer] = useState(undefined);
   const [reviews, setReviews] = useState([]);
@@ -35,35 +34,36 @@ export default function TrainerProfilePage() {
   const [lightbox, setLightbox] = useState(null);
 
   const loadSlots = useCallback(async () => {
-    const now = new Date();
-    const until = new Date(now.getTime() + DAYS_AHEAD * 86400000);
+    if (!week) return;
     const { data } = await getSupabase()
       .from('slots')
       .select('id, starts_at, ends_at, status, gym_id, gyms(name)')
       .eq('trainer_id', id)
       .neq('status', 'blocked')
-      .gt('starts_at', now.toISOString())
-      .lt('starts_at', until.toISOString())
+      .gt('starts_at', new Date().toISOString())
+      .lt('starts_at', week.end)
       .order('starts_at');
     setSlots(data || []);
-  }, [id]);
+  }, [id, week]);
 
   useEffect(() => {
     const supabase = getSupabase();
-    (async () => {
-      const [t, r] = await Promise.all([
-        supabase
-          .from('trainers')
-          .select('*, profiles!trainers_id_fkey(full_name), trainer_gyms(gyms(id, name, address))')
-          .eq('id', id)
-          .maybeSingle(),
-        supabase.from('reviews').select('*').eq('trainer_id', id).order('created_at', { ascending: false }),
-      ]);
+    Promise.all([
+      supabase
+        .from('trainers')
+        .select('*, profiles!trainers_id_fkey(full_name), trainer_gyms(gyms(id, name, address))')
+        .eq('id', id)
+        .maybeSingle(),
+      supabase.from('reviews').select('*').eq('trainer_id', id).order('created_at', { ascending: false }),
+    ]).then(([t, r]) => {
       setTrainer(t.data || null);
       setReviews(r.data || []);
-    })();
-    loadSlots();
+    });
+  }, [id]);
 
+  useEffect(() => {
+    loadSlots();
+    const supabase = getSupabase();
     // Realtime: čim neko zakaže ili trener promeni raspored, kalendar se osveži
     const channel = supabase
       .channel(`slots-${id}`)
@@ -77,12 +77,22 @@ export default function TrainerProfilePage() {
   }, [id, loadSlots]);
 
   const gyms = useMemo(() => (trainer?.trainer_gyms || []).map((tg) => tg.gyms).filter(Boolean), [trainer]);
-  const filteredSlots = useMemo(
+  const filtered = useMemo(
     () => (gymFilter === 'all' ? slots : slots.filter((s) => s.gym_id === gymFilter)),
     [slots, gymFilter]
   );
-  const days = useMemo(() => groupByDay(filteredSlots), [filteredSlots]);
-  const currentDay = days.find((d) => d.key === activeDay) || days[0] || null;
+  const byDay = useMemo(() => {
+    const m = {};
+    for (const s of filtered) (m[dayKey(s.starts_at)] ||= []).push(s);
+    return m;
+  }, [filtered]);
+
+  const firstUseful =
+    week?.days.find((d) => !d.past && (byDay[d.key] || []).some((s) => s.status === 'open')) ||
+    week?.days.find((d) => !d.past);
+  const currentKey = activeDay || firstUseful?.key;
+  const currentDay = week?.days.find((d) => d.key === currentKey);
+  const daySlots = byDay[currentKey] || [];
   const rating = averageRating(reviews);
   const isOwn = user?.id === id;
 
@@ -122,39 +132,56 @@ export default function TrainerProfilePage() {
         </p>
       )}
 
-      <section className="profile-head">
-        <Avatar url={trainer.avatar_url} name={name} size="lg" />
-        <div>
-          <h1 className="profile-name">{name}</h1>
-          <p className="muted">
-            {rating ? <span className="stars">{stars(rating)}</span> : null}
-            {rating ? ` ${rating.toFixed(1)} · ${reviews.length} ${reviews.length === 1 ? 'ocena' : 'ocena'}` : 'Još nema ocena'}
-          </p>
-          {trainer.specialties?.length > 0 && (
-            <div className="chips">
-              {trainer.specialties.map((s) => (
-                <span key={s} className="chip">{s}</span>
-              ))}
-            </div>
-          )}
+      {/* ZAGLAVLJE */}
+      <section className="hero card">
+        <div className="hero-main">
+          <Avatar url={trainer.avatar_url} name={name} size="lg" />
+          <div className="hero-text">
+            <h1 className="profile-name">{name}</h1>
+            <p className="hero-meta">
+              {rating ? (
+                <>
+                  <span className="stars">{stars(rating)}</span> {rating.toFixed(1)} · {reviews.length} ocena
+                </>
+              ) : (
+                <span className="muted">Još nema ocena</span>
+              )}
+              {trainer.years_experience !== null && <span className="muted"> · {trainer.years_experience} god. iskustva</span>}
+            </p>
+            {trainer.specialties?.length > 0 && (
+              <div className="chips">
+                {trainer.specialties.map((s) => (
+                  <span key={s} className="chip">{s}</span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+        <div className="hero-side">
+          <span className="small muted">Cena po treningu</span>
+          <span className="price">{formatPrice(trainer.price_per_session) || 'Po dogovoru'}</span>
+          {trainer.price_note && <span className="small prewrap">{trainer.price_note}</span>}
+        </div>
+        {contacts.length > 0 && (
+          <div className="contact-row">
+            {contacts.map((c) => (
+              <a key={c.label} href={c.href} target="_blank" rel="noopener noreferrer" className={`btn btn-contact ${c.cls}`}>
+                {c.label}
+              </a>
+            ))}
+          </div>
+        )}
       </section>
-
-      {contacts.length > 0 && (
-        <div className="contact-row">
-          {contacts.map((c) => (
-            <a key={c.label} href={c.href} target="_blank" rel="noopener noreferrer" className={`btn btn-contact ${c.cls}`}>
-              {c.label}
-            </a>
-          ))}
-        </div>
-      )}
 
       <div className="profile-grid">
         <div className="profile-main">
           {/* KALENDAR */}
           <section className="card">
-            <h2 className="section-title">Zakaži termin</h2>
+            <div className="cal-head">
+              <h2 className="section-title">Zakaži termin</h2>
+              {week && <span className="small muted">Ova nedelja · {week.range}</span>}
+            </div>
+
             {gyms.length > 1 && (
               <div className="chips">
                 <button className={gymFilter === 'all' ? 'chip chip-btn active' : 'chip chip-btn'} onClick={() => setGymFilter('all')}>
@@ -172,28 +199,43 @@ export default function TrainerProfilePage() {
               </div>
             )}
 
-            {days.length === 0 ? (
-              <p className="muted">Trener trenutno nema objavljenih termina u naredne {DAYS_AHEAD} dana. Javi mu se direktno preko kontakta iznad.</p>
+            {!week ? (
+              <p className="muted">Učitavam raspored…</p>
             ) : (
               <>
-                <div className="day-tabs">
-                  {days.map((d) => {
-                    const free = d.items.filter((s) => s.status === 'open').length;
+                <div className="week-strip">
+                  {week.days.map((d) => {
+                    const items = byDay[d.key] || [];
+                    const free = items.filter((s) => s.status === 'open').length;
+                    const cls = [
+                      'week-day',
+                      d.key === currentKey && 'active',
+                      d.past && 'past',
+                      !d.past && free > 0 && 'has-free',
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
                     return (
-                      <button
-                        key={d.key}
-                        className={currentDay?.key === d.key ? 'day-tab active' : 'day-tab'}
-                        onClick={() => setActiveDay(d.key)}
-                      >
-                        <span>{formatDayShort(d.items[0].starts_at)}</span>
-                        <span className="small">{free > 0 ? `${free} slob.` : 'pun'}</span>
+                      <button key={d.key} className={cls} disabled={d.past} onClick={() => setActiveDay(d.key)}>
+                        <span className="week-day-name">{d.short}</span>
+                        <span className="week-day-num">{d.num}</span>
+                        <span className="week-day-count">{d.past ? '·' : free > 0 ? free : '–'}</span>
                       </button>
                     );
                   })}
                 </div>
-                {currentDay && (
+
+                {currentDay && <p className="day-title">{currentDay.label}</p>}
+
+                {slots.length === 0 ? (
+                  <p className="empty-note">
+                    Trener još nije objavio raspored za ovu nedelju. Javi mu se direktno preko kontakta iznad.
+                  </p>
+                ) : daySlots.length === 0 ? (
+                  <p className="empty-note">Nema termina ovog dana. Izaberi drugi dan.</p>
+                ) : (
                   <div className="slot-grid">
-                    {currentDay.items.map((s) =>
+                    {daySlots.map((s) =>
                       s.status === 'open' && !isOwn ? (
                         <button key={s.id} className="slot slot-open" onClick={() => pickSlot(s)}>
                           <strong>{formatTime(s.starts_at)}</strong>
@@ -213,25 +255,16 @@ export default function TrainerProfilePage() {
             )}
           </section>
 
-          {/* O TRENERU */}
-          {(trainer.bio || trainer.certificates || trainer.years_experience !== null) && (
+          {(trainer.bio || trainer.certificates) && (
             <section className="card">
               <h2 className="section-title">O meni</h2>
               {trainer.bio && <p className="prewrap">{trainer.bio}</p>}
-              <dl className="facts">
-                {trainer.years_experience !== null && (
-                  <>
-                    <dt>Iskustvo</dt>
-                    <dd>{trainer.years_experience} {trainer.years_experience === 1 ? 'godina' : 'godina'}</dd>
-                  </>
-                )}
-                {trainer.certificates && (
-                  <>
-                    <dt>Sertifikati</dt>
-                    <dd className="prewrap">{trainer.certificates}</dd>
-                  </>
-                )}
-              </dl>
+              {trainer.certificates && (
+                <>
+                  <h3 className="sub-title">Sertifikati</h3>
+                  <p className="prewrap">{trainer.certificates}</p>
+                </>
+              )}
             </section>
           )}
 
@@ -269,20 +302,14 @@ export default function TrainerProfilePage() {
         </div>
 
         <aside className="profile-side">
-          <section className="card">
-            <h2 className="section-title">Cena</h2>
-            <p className="price">{formatPrice(trainer.price_per_session) || 'Po dogovoru'}</p>
-            {trainer.price_per_session !== null && <p className="small muted">po treningu</p>}
-            {trainer.price_note && <p className="small prewrap">{trainer.price_note}</p>}
-          </section>
           {gyms.length > 0 && (
             <section className="card">
-              <h2 className="section-title">Teretane</h2>
+              <h2 className="section-title">Gde trenira</h2>
               <ul className="plain-list">
                 {gyms.map((g) => (
                   <li key={g.id}>
                     <strong>{g.name}</strong>
-                    {g.address && <span className="small muted"> · {g.address}</span>}
+                    {g.address && <div className="small muted">{g.address}</div>}
                   </li>
                 ))}
               </ul>
@@ -292,12 +319,7 @@ export default function TrainerProfilePage() {
       </div>
 
       {picked && (
-        <BookingDialog
-          slot={picked}
-          trainerName={name}
-          onClose={() => setPicked(null)}
-          onBooked={() => loadSlots()}
-        />
+        <BookingDialog slot={picked} trainerName={name} onClose={() => setPicked(null)} onBooked={() => loadSlots()} />
       )}
 
       {lightbox && (
@@ -320,12 +342,8 @@ function BookingDialog({ slot, trainerName, onClose, onBooked }) {
     setError('');
     const { error } = await getSupabase().rpc('book_slot', { p_slot_id: slot.id, p_note: note });
     setBusy(false);
-    if (error) {
-      setError(errorMessage(error));
-      onBooked();
-      return;
-    }
-    setDone(true);
+    if (error) setError(errorMessage(error));
+    else setDone(true);
     onBooked();
   }
 

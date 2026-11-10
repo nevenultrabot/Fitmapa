@@ -18,6 +18,7 @@ Tehnologije: Next.js (web aplikacija koja radi i na telefonu), Supabase (baza, n
 2. Levo izaberi **SQL Editor**, pa **New query**.
 3. Otvori fajl `supabase/schema.sql`, kopiraj **ceo** sadržaj, nalepi ga i klikni **Run**.
    Treba da piše *Success. No rows returned*. Pokreće se **samo jednom**.
+   Zatim isto uradi i sa fajlom `supabase/002_nedeljni_raspored.sql` (nedeljni raspored).
 4. Levo izaberi **Authentication**, pa **URL Configuration**:
    - **Site URL:** za sada ostavi kako jeste. Posle koraka 3 tu upisuješ adresu sa Vercela (npr. `https://fitmapa.vercel.app`).
 5. Za brže testiranje možeš privremeno isključiti potvrdu emaila:
@@ -59,6 +60,7 @@ Tehnologije: Next.js (web aplikacija koja radi i na telefonu), Supabase (baza, n
 - **Prave teretane:** treneri ih sami dodaju (Profil → *Moje teretane nema na listi*, pa klik na mapu). Probne „Demo” teretane obriši ili preimenuj u Supabase → **Table Editor → gyms**.
 - **Slika teretane:** u Table Editor → `gyms` upiši link slike u kolonu `image_url`.
 - **Izmena koda:** svaka promena na GitHub-u automatski pravi novu verziju na Vercelu.
+- **Nedeljni raspored:** važi samo tekuća nedelja (pon–ned). U nedelju u 22h počinje nova nedelja, stari termini se brišu i trener pravi novi raspored. Zakazani termini se čuvaju još 14 dana radi ocena, a ocene ostaju zauvek.
 - **Lokacija:** mapa se otvara na Novom Sadu. Dugme „Teretane oko mene” traži dozvolu za lokaciju. Ako je korisnik odbije, ostaje Novi Sad.
 
 ## Struktura
