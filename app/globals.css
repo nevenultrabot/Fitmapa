@@ -1190,3 +1190,6 @@ body.intro-running .chat-launcher { opacity: 0; transform: translateY(16px); poi
   .chat-launcher { right: 14px; }
   .chat-avatar-btn { width: 56px; height: 56px; }
 }
+
+/* dok je chat otvoren, naše dugme se sklanja (Tawk ima svoje dugme za zatvaranje) */
+.chat-launcher.chat-is-open { opacity: 0; transform: scale(0.6); pointer-events: none; }

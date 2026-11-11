@@ -21,6 +21,7 @@ export default function ChatLauncher() {
   const [ready, setReady] = useState(false);
   const [bubble, setBubble] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [open, setOpen] = useState(false); // dok je chat otvoren, naše dugme se ne vidi
   const [photoOk, setPhotoOk] = useState(true);
   const injected = useRef(false);
 
@@ -39,8 +40,15 @@ export default function ChatLauncher() {
       api.hideWidget();
       setReady(true);
     };
-    api.onChatMinimized = () => api.hideWidget();
-    api.onChatHidden = () => api.hideWidget();
+    api.onChatMaximized = () => setOpen(true);
+    api.onChatMinimized = () => {
+      api.hideWidget();
+      setOpen(false);
+    };
+    api.onChatHidden = () => {
+      api.hideWidget();
+      setOpen(false);
+    };
     api.onUnreadCountChanged = (count) => setUnread(count || 0);
 
     const s = document.createElement('script');
@@ -68,12 +76,13 @@ export default function ChatLauncher() {
     const api = window.Tawk_API;
     if (!api?.maximize) return;
     setBubble(false);
+    setOpen(true);
     api.showWidget();
     api.maximize();
   }
 
   return (
-    <div className={`chat-launcher ${ready ? 'ready' : ''}`}>
+    <div className={`chat-launcher ${ready ? 'ready' : ''} ${open ? 'chat-is-open' : ''}`}>
       {bubble && (
         <div className="chat-bubble" role="status">
           <button className="chat-bubble-text" onClick={openChat}>
