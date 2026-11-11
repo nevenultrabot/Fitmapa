@@ -603,67 +603,139 @@ img.gym-details-cover { display: block; }
    ===================================================================== */
 .intro { display: none; } /* stara verzija */
 
-/* Početna: uvod gore, ispod puna mapa (posle prelaza vidi se 70% uvod / 30% mapa) */
+/* =====================================================================
+   Početna: logo preko celog ekrana → podela (uvod 2/3 levo, "O nama" 1/3 desno)
+   ===================================================================== */
 .home { position: relative; --screen: calc(100dvh - var(--header)); }
+.home-hero { display: flex; min-height: var(--screen); }
+
 .home-intro {
-  position: relative; height: var(--screen);
-  overflow-y: auto; overscroll-behavior: contain;
+  position: relative; flex: 0 0 100%; min-width: 0; min-height: var(--screen);
+  display: flex; flex-direction: column;
+  container-type: inline-size;
   color: #fff;
   background:
     radial-gradient(900px 520px at 50% -8%, rgba(200, 240, 60, 0.16), transparent 62%),
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 44px 44px,
     var(--ink);
-  transition: height 1.1s cubic-bezier(0.65, 0, 0.35, 1);
+  transition: flex-basis 1.2s cubic-bezier(0.65, 0, 0.35, 1);
 }
-/* posle prelaza točkić/prst iznad uvoda skroluje celu stranicu (ka mapi) */
-.home.split .home-intro { height: calc(var(--screen) * 0.7); overflow: hidden; overscroll-behavior: auto; }
 .home-intro-content {
-  min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 32px 20px 108px; text-align: center;
-  transform-origin: top center;
-  transition: transform 1.1s cubic-bezier(0.65, 0, 0.35, 1);
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px 96px; text-align: center;
 }
-.home-intro-content.is-compact { min-height: 0; justify-content: flex-start; padding-top: 24px; }
-.home.split .home-intro-content { padding-bottom: 16px; }
-@media (min-width: 701px) { .home-intro-content { padding-bottom: 40px; } }
+.home-intro-content.is-compact { justify-content: center; }
+/* "zoom-out": sadržaj se pri podeli spusti iz uvećanog u normalnu veličinu */
+.home-intro-content.zoomed { animation: home-zoom-out 1.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes home-zoom-out { from { opacity: 0; transform: scale(1.14); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
 
-/* Puna mapa ispod uvoda — učitana unapred, otkriva se kroz zamućenje */
-.home-map {
-  position: relative; height: calc(var(--screen) - 64px); overflow: hidden;
-  border-top: 1px solid rgba(200, 240, 60, 0.35);
-  opacity: 0; filter: blur(18px) saturate(0.6); transform: scale(1.06);
-  transition:
-    opacity 0.8s ease 0.15s,
-    filter 1.5s ease 0.25s,
-    transform 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
+.home-about {
+  flex: 0 0 0; min-width: 0; overflow: hidden; position: relative;
+  background: var(--bg); color: var(--ink);
+  box-shadow: inset 1px 0 0 rgba(200, 240, 60, 0.6);
+  transition: flex-basis 1.2s cubic-bezier(0.65, 0, 0.35, 1);
 }
-.home.split .home-map { opacity: 1; filter: blur(0) saturate(1); transform: none; }
-.home.settled .home-map { filter: none; transition: none; }
-.map-explorer { position: relative; width: 100%; height: 100%; }
+@media (min-width: 900px) {
+  .home.split .home-intro { flex-basis: 66.666%; }
+  .home.split .home-about { flex-basis: 33.334%; }
+  .home-intro, .home-about { max-height: none; }
+}
+.home.instant .home-intro, .home.instant .home-about { transition: none; }
+.home.instant .home-intro-content.zoomed { animation: none; }
 
-/* Strelica: ispod je nastavak */
+/* Podnožje uvoda: ponovno puštanje + strelica ka nastavku */
+.home-intro-foot {
+  position: absolute; left: 0; right: 0; bottom: 18px;
+  display: flex; justify-content: center; pointer-events: none;
+  animation: onb-up 0.6s ease 0.3s both;
+}
+.home-intro-foot > * { pointer-events: auto; }
+.home-replay {
+  position: absolute; left: 20px; bottom: 6px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8); font-weight: 700; font-size: 0.85rem;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.home-replay svg { transition: transform 0.5s ease; }
+.home-replay:hover { background: rgba(200, 240, 60, 0.14); border-color: var(--accent); color: #fff; }
+.home-replay:hover svg { transform: rotate(-300deg); }
 .home-arrow {
-  position: absolute; left: 50%; bottom: 12px; z-index: 2;
-  width: 44px; height: 44px; margin-left: -22px; border-radius: 50%;
+  width: 46px; height: 46px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.06);
   color: var(--accent); font-size: 1.5rem;
-  opacity: 0; animation: home-arrow-in 0.5s ease 1.1s forwards, home-arrow-bounce 1.8s ease-in-out 1.6s infinite;
+  animation: home-arrow-bounce 1.8s ease-in-out 0.8s infinite;
 }
 .home-arrow:hover { background: rgba(200, 240, 60, 0.15); }
-.home.instant .home-arrow { animation: home-arrow-in 0.4s ease forwards, home-arrow-bounce 1.8s ease-in-out 0.6s infinite; }
-@keyframes home-arrow-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 @keyframes home-arrow-bounce { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(7px); opacity: 0.75; } }
-
-.home-replay {
-  position: absolute; bottom: 12px; right: 16px; z-index: 2;
-  display: inline-flex; align-items: center; gap: 6px;
-  background: none; border: 0; color: rgba(255, 255, 255, 0.55); font-weight: 600; font-size: 0.85rem;
-  opacity: 0; animation: onb-up 0.5s ease 1.1s forwards;
+@media (max-width: 899px) {
+  .home-replay { left: 16px; padding: 0; width: 40px; height: 40px; justify-content: center; font-size: 0; gap: 0; }
+  .home-replay svg { font-size: 1.05rem; }
 }
-.home-replay:hover { color: #fff; }
-.home.instant .home-replay { animation: none; opacity: 1; }
+
+/* Desno: O nama + CTA */
+.about {
+  height: 100%; min-width: 340px; display: flex; flex-direction: column; justify-content: center;
+  padding: 40px clamp(24px, 3vw, 52px);
+}
+.about > * { opacity: 0; animation: about-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.about > :nth-child(1) { animation-delay: 0.55s; }
+.about > :nth-child(2) { animation-delay: 0.68s; }
+.about > :nth-child(3) { animation-delay: 0.81s; }
+.about > :nth-child(4) { animation-delay: 0.94s; }
+.about > :nth-child(5) { animation-delay: 1.07s; }
+.about > :nth-child(6) { animation-delay: 1.2s; }
+.about.instant > * { animation: none; opacity: 1; }
+@keyframes about-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+
+.about-eyebrow {
+  align-self: flex-start; padding: 5px 12px; border-radius: 999px;
+  background: var(--ink); color: var(--accent);
+  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.about-title { font-size: clamp(1.8rem, 2.5vw, 2.7rem); font-weight: 800; line-height: 1.08; letter-spacing: -0.035em; margin: 16px 0 14px; }
+.about-mark { background: linear-gradient(transparent 58%, var(--accent) 58%); padding: 0 2px; }
+.about-text { margin: 0 0 18px; font-size: 1.02rem; line-height: 1.6; color: #3d4148; }
+.about-list { list-style: none; padding: 0; margin: 0 0 26px; display: flex; flex-direction: column; gap: 10px; }
+.about-list li { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 0.95rem; }
+.about-list svg {
+  flex: none; width: 34px; height: 34px; padding: 8px; border-radius: 10px;
+  background: var(--ink); color: var(--accent);
+}
+.about-cta {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 14px;
+  padding: 8px 8px 8px 24px; border: 0; border-radius: 999px;
+  background: var(--ink); color: #fff; font-size: 1.08rem; font-weight: 800;
+  box-shadow: 0 12px 30px rgba(20, 22, 26, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.about-cta-icon {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); color: var(--ink); font-size: 1.2rem;
+  transition: transform 0.25s ease;
+}
+.about-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(20, 22, 26, 0.3), 0 0 0 3px rgba(200, 240, 60, 0.6); }
+.about-cta:hover .about-cta-icon { transform: translateX(4px); }
+.about-links { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+.about-links a { font-weight: 700; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 3px; text-underline-offset: 4px; align-self: flex-start; }
+.about-note { font-size: 0.82rem; color: var(--muted); }
+
+@media (max-width: 899px) {
+  .home-hero { flex-direction: column; }
+  .home-intro { flex-basis: auto; }
+  .home-about { flex-basis: auto; box-shadow: inset 0 1px 0 rgba(200, 240, 60, 0.6); }
+  .home:not(.split) .home-about { display: none; }
+  .about { min-width: 0; padding: 44px 20px 52px; }
+  .about-title { font-size: 2rem; }
+}
+
+/* Puna mapa ispod */
+.home-map { position: relative; height: var(--screen); overflow: hidden; border-top: 1px solid rgba(200, 240, 60, 0.35); }
+.map-explorer { position: relative; width: 100%; height: 100%; }
 
 /* 1. Logo */
 .onb-logo { display: flex; flex-direction: column; align-items: center; gap: 12px; animation: onb-fade-out 0.45s ease 2.35s forwards; }
@@ -685,13 +757,13 @@ img.gym-details-cover { display: block; }
   transform-origin: top center; will-change: transform;
 }
 .onb-title {
-  font-size: clamp(1.5rem, 6.2vw, 3.6rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.12;
+  font-size: clamp(1.5rem, 6.2vw, 3.6rem); font-size: clamp(1.5rem, 7cqi, 3.6rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.12;
   margin: 0; white-space: nowrap;
 }
 .onb-prefix { display: inline-block; transition: opacity 0.5s ease, transform 0.6s ease; }
 .onb-prefix.out { opacity: 0; transform: translateY(-14px); }
 .onb-typed { color: var(--accent); text-shadow: 0 0 28px rgba(200, 240, 60, 0.35); }
-.onb-head.final .onb-title { white-space: normal; max-width: 820px; font-size: clamp(1.9rem, 4.8vw, 3.4rem); }
+.onb-head.final .onb-title { white-space: normal; max-width: 820px; font-size: clamp(1.9rem, 4.8vw, 3.4rem); font-size: clamp(1.7rem, 5.6cqi, 3.4rem); }
 .onb-final { display: inline; }
 .onb-accent { color: var(--accent); text-shadow: 0 0 28px rgba(200, 240, 60, 0.35); }
 .onb-caret {
@@ -1193,3 +1265,39 @@ body.intro-running .chat-launcher { opacity: 0; transform: translateY(16px); poi
 
 /* dok je chat otvoren, naše dugme se sklanja (Tawk ima svoje dugme za zatvaranje) */
 .chat-launcher.chat-is-open { opacity: 0; transform: scale(0.6); pointer-events: none; }
+
+/* Početna — CTA u uvodu i nagoveštaj sekcije "O nama" na telefonu */
+.home-intro .onb-cta { margin-top: 26px; }
+@media (max-width: 899px) {
+  /* uvod je malo niži od ekrana, da se pri dnu vidi početak bele sekcije */
+  .home-intro { min-height: calc(var(--screen) - 34px); }
+  .home-about { margin-top: -18px; border-radius: 20px 20px 0 0; position: relative; z-index: 1; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35); }
+  .home-intro-foot { bottom: 26px; }
+  .home-intro-content { padding-bottom: 92px; }
+}
+.about-title { font-size: clamp(1.7rem, 2.3vw, 2.5rem); }
+.about-mark { white-space: nowrap; }
+@media (max-width: 899px) { .home-intro-content { padding-bottom: 82px; } }
+/* niži ekrani računara (npr. laptop 1280×720): zbijeniji uvod da CTA stane */
+@media (min-width: 900px) and (max-height: 860px) {
+  .home-intro-content { padding: 20px 24px 64px; }
+  .onb-head.compact .onb-title { font-size: clamp(1.3rem, 3.2cqi, 1.8rem); }
+  .onb-head.compact .onb-sub { font-size: 0.9rem; margin-top: 6px; }
+  .onb-steps { margin-top: 16px; }
+  .onb-step-2 { margin-top: -34px; }
+  .onb-step-3 { margin-top: 0; }
+  .onb-step-card { padding: 12px 14px; gap: 12px; }
+  .onb-step-icon { width: 40px; height: 40px; font-size: 1.15rem; }
+  .onb-step h3 { font-size: 1.05rem; }
+  .onb-step p { font-size: 0.84rem; }
+  .home-intro .onb-cta { margin-top: 16px; gap: 10px; }
+  .onb-cta-text { font-size: 0.95rem; }
+  .onb-cta-btn { padding: 14px 26px; font-size: 1.05rem; }
+}
+
+/* strelica i na računaru (dno leve kolone); telefon: više prostora, oštre ivice sekcije */
+@media (max-width: 899px) {
+  .home-about { margin-top: 0; border-radius: 0; box-shadow: inset 0 1px 0 rgba(200, 240, 60, 0.6); }
+  .home-intro-foot { bottom: 30px; }
+  .home-intro-content { padding-bottom: 100px; }
+}

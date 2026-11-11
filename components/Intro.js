@@ -1,18 +1,27 @@
 'use client';
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { FiArrowRight, FiCalendar, FiChevronDown, FiMapPin, FiRotateCcw, FiUser } from 'react-icons/fi';
+import Link from 'next/link';
+import {
+  FiArrowRight,
+  FiCalendar,
+  FiChevronDown,
+  FiCreditCard,
+  FiMapPin,
+  FiRotateCcw,
+  FiUser,
+} from 'react-icons/fi';
 import { LogoMark } from './Logo';
 import MapExplorer from './MapExplorer';
 import { StickFlex, StickScale, StickWalk } from './Stickmen';
 
 /* ---------------------------------------------------------------------
    Početna stranica
-   logo → 3 poruke sa stickmanom → 4. poruka → koraci → CTA
-   → posle ~4 s: uvod se smanji i ode gore (70% ekrana), a dole se kroz
-     zamućenje otkrije mapa (30% ekrana). Strelica pokazuje da se skroluje
-     dole do pune, funkcionalne mape (učitava se odmah, u pozadini).
-   "Preskoči" vodi odmah na završni prikaz i nestaje kad se uvod završi.
+   1. logo preko celog ekrana
+   2. zoom-out i podela: uvod ide levo (2/3), desno se otvara "O nama" + CTA (1/3)
+   3. levo se nastavlja: poruke sa stickmanom → 4. poruka → koraci
+   4. kad se uvod završi: dugme za ponovno puštanje + strelica ka mapi
+   Ispod je puna mapa (učitava se odmah). Na telefonu "O nama" ide ispod uvoda.
    --------------------------------------------------------------------- */
 
 const SEEN_KEY = 'fitmapa-intro';
@@ -28,10 +37,8 @@ const TYPE_MS = 75;
 const FINAL_TYPE_MS = 45;
 const DELETE_MS = 40;
 const HOLD_MS = 1500;
-const SUB_HOLD_MS = 900; // posle 4. poruke koraci kreću za ~1.1 s
+const SUB_HOLD_MS = 900;
 const MORPH_MS = 850;
-const SPLIT_DELAY_MS = 3200; // pauza posle poslednje animacije pre prelaza na mapu
-const INTRO_SHARE = 0.7;     // uvod zauzima 70% visine, mapa 30%
 const HEADER_PX = 56;
 
 const STEPS = [
@@ -41,19 +48,12 @@ const STEPS = [
 ];
 const STEPS_TOTAL_MS = 7800; // mora da se slaže sa CSS-om koraka
 
-const COMPACT = ['steps', 'cta', 'split'];
-
 export default function Intro() {
-  const [phase, setPhase] = useState(null); // logo | type | steps | cta | split
+  const [phase, setPhase] = useState(null); // logo | type | steps | done
   const [instant, setInstant] = useState(false);
   const [run, setRun] = useState(0);
-  const [skipGone, setSkipGone] = useState(false);
-  const [scale, setScale] = useState(1);
-  const [settled, setSettled] = useState(false);
-  const rootRef = useRef(null);
   const mapRef = useRef(null);
-  const introRef = useRef(null);
-  const contentRef = useRef(null);
+  const aboutRef = useRef(null);
 
   // prvi ulazak u sesiji = animacija; posle toga odmah završni prikaz
   useEffect(() => {
@@ -65,37 +65,19 @@ export default function Intro() {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (seen || reduced) {
       setInstant(true);
-      setSkipGone(true);
-      setPhase('split');
+      setPhase('done');
     } else {
       setPhase('logo');
     }
   }, []);
 
-  // tajming faza
   useEffect(() => {
-    if (phase === 'logo') {
-      const t = setTimeout(() => setPhase((p) => (p === 'logo' ? 'type' : p)), LOGO_MS);
-      return () => clearTimeout(t);
-    }
-    if (phase === 'cta' && !instant) {
-      const t = setTimeout(() => setPhase((p) => (p === 'cta' ? 'split' : p)), SPLIT_DELAY_MS);
-      return () => clearTimeout(t);
-    }
-    if (phase === 'split') {
-      introRef.current?.scrollTo({ top: 0, behavior: instant ? 'auto' : 'smooth' });
-      window.scrollTo({ top: 0, behavior: instant ? 'auto' : 'smooth' });
-      const t1 = setTimeout(() => setSkipGone(true), 500); // Preskoči izbledi, pa nestane
-      const t2 = setTimeout(() => setSettled(true), instant ? 0 : 2000); // posle prelaza mapa bez filtera
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
-    }
-  }, [phase, instant]);
+    if (phase !== 'logo') return;
+    const t = setTimeout(() => setPhase((p) => (p === 'logo' ? 'type' : p)), LOGO_MS);
+    return () => clearTimeout(t);
+  }, [phase]);
 
-  // tamna pozadina cele stranice dok je Početna otvorena — na iPhone-u se ispod
-  // Safari trake ne vidi bela traka, pa uvod izgleda preko celog ekrana
+  // tamna pozadina iza stranice (na iPhone-u se ispod Safari trake ne vidi bela traka)
   useEffect(() => {
     const html = document.documentElement;
     const prev = [html.style.backgroundColor, document.body.style.backgroundColor];
@@ -107,132 +89,133 @@ export default function Intro() {
     };
   }, []);
 
-  // dok uvod traje stranica se ne skroluje; posle prelaza se skroluje do mape
+  // chat dugme se ne prikazuje dok traje logo
   useEffect(() => {
-    if (!phase) return;
-    const lock = phase !== 'split';
-    if (lock) window.scrollTo(0, 0);
-    document.body.classList.toggle('intro-running', lock);
-    document.documentElement.style.overflow = lock ? 'hidden' : '';
-    return () => {
-      document.documentElement.style.overflow = '';
-      document.body.classList.remove('intro-running');
-    };
+    document.body.classList.toggle('intro-running', phase === 'logo');
+    return () => document.body.classList.remove('intro-running');
   }, [phase]);
 
-  // u završnom prikazu uvod se smanji tako da stane u gornjih 70%
-  useLayoutEffect(() => {
-    if (phase !== 'split') return;
-    const fit = () => {
-      const content = contentRef.current;
-      if (!content) return;
-      // mesto za strelicu ispod sadržaja
-      const avail = (window.innerHeight - HEADER_PX) * INTRO_SHARE - 64;
-      setScale(Math.max(0.55, Math.min(1, avail / content.offsetHeight)));
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  }, [phase]);
-
-  const skip = useCallback(() => {
-    setInstant(true);
-    setPhase('split');
+  const scrollToEl = (el) => {
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - HEADER_PX, behavior: 'smooth' });
+  };
+  const goToMap = useCallback(() => scrollToEl(mapRef.current), []);
+  // strelica: na računaru glatko spusti stranicu tako da se otkrije 15% mape (nagoveštaj),
+  // na telefonu vodi do sekcije "O nama" ispod uvoda
+  const goNext = useCallback(() => {
+    if (window.innerWidth >= 900) {
+      const map = mapRef.current;
+      if (!map) return;
+      const r = map.getBoundingClientRect();
+      window.scrollTo({ top: window.scrollY + r.top + r.height * 0.15 - window.innerHeight, behavior: 'smooth' });
+    } else {
+      scrollToEl(aboutRef.current);
+    }
   }, []);
-
-  // skrol do mape (dno stranice — gore ostaje traka uvoda sa strelicom za povratak)
-  const goToMap = useCallback(() => {
-    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-  }, []);
-
-  // strelica pokazuje dole dok smo na uvodu, a gore kad smo na mapi
-  const [atMap, setAtMap] = useState(false);
-  useEffect(() => {
-    if (phase !== 'split') return;
-    const onScroll = () => {
-      const el = mapRef.current;
-      if (el) setAtMap(el.getBoundingClientRect().top < window.innerHeight * 0.45);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [phase]);
 
   const replay = useCallback(() => {
-    window.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setInstant(false);
-    setSkipGone(false);
-    setSettled(false);
-    setScale(1);
     setRun((r) => r + 1);
     setPhase('logo');
   }, []);
 
   if (!phase) return <div className="home" />;
 
-  const compact = COMPACT.includes(phase);
-  const split = phase === 'split';
+  const split = phase !== 'logo';
+  const compact = phase === 'steps' || phase === 'done';
+  const done = phase === 'done';
 
   return (
-    <div ref={rootRef} className={`home ${split ? 'split' : ''} ${instant ? 'instant' : ''} ${settled ? 'settled' : ''}`}>
-      <section className="home-intro" ref={introRef}>
-        <div
-          ref={contentRef}
-          className={`home-intro-content ${compact ? 'is-compact' : ''}`}
-          style={split ? { transform: `scale(${scale})` } : undefined}
-        >
-          {phase === 'logo' ? (
-            <LogoStage key={`l${run}`} />
-          ) : (
-            <>
-              <Headline
-                key={`h${run}`}
-                instant={instant}
-                compact={compact}
-                onDone={() => setPhase((p) => (p === 'type' ? 'steps' : p))}
-              />
-              {compact && (
-                <Steps key={`s${run}`} instant={instant} onDone={() => setPhase((p) => (p === 'steps' ? 'cta' : p))} />
-              )}
-              {(phase === 'cta' || split) && <Cta
-                  key={`c${run}`}
+    <div className={`home ${split ? 'split' : ''} ${instant ? 'instant' : ''}`}>
+      <div className="home-hero">
+        <section className="home-intro">
+          <div key={`c${run}${split}`} className={`home-intro-content ${compact ? 'is-compact' : ''} ${split ? 'zoomed' : ''}`}>
+            {phase === 'logo' ? (
+              <LogoStage />
+            ) : (
+              <>
+                <Headline
+                  key={`h${run}`}
                   instant={instant}
-                  onShow={() => {
-                    // na nižim ekranima pomeri samo uvod (ne celu stranicu) do dugmeta
-                    const el = introRef.current;
-                    if (el && !split) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-                  }}
-                  onStart={split ? goToMap : () => setPhase('split')}
-                />}
-            </>
+                  compact={compact}
+                  onDone={() => setPhase((p) => (p === 'type' ? 'steps' : p))}
+                />
+                {compact && (
+                  <Steps key={`s${run}`} instant={instant} onDone={() => setPhase((p) => (p === 'steps' ? 'done' : p))} />
+                )}
+                {done && (
+                  <div className="onb-cta">
+                    <p className="onb-cta-text">Spreman? Prvi korak je najteži — ostalo je na nama.</p>
+                    <button className="onb-cta-btn" onClick={goToMap}>
+                      Zakaži svoj prvi trening <FiArrowRight aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {split && (
+            <div className="home-intro-foot">
+              {done && (
+                <button className="home-replay" onClick={replay}>
+                  <FiRotateCcw aria-hidden="true" /> Pusti uvod ponovo
+                </button>
+              )}
+              {/* na telefonu strelica pulsira od početka uvoda — ispod je "O nama" */}
+              <button className="home-arrow" onClick={goNext} aria-label="Nastavi dole">
+                <FiChevronDown aria-hidden="true" />
+              </button>
+            </div>
           )}
-        </div>
-        {split && (
-          <>
-            <button
-              className={`home-arrow ${atMap ? 'up' : ''}`}
-              onClick={atMap ? () => window.scrollTo({ top: 0, behavior: 'smooth' }) : goToMap}
-              aria-label={atMap ? 'Nazad na uvod' : 'Nastavi do mape'}
-            >
-              <FiChevronDown aria-hidden="true" />
-            </button>
-            <button className="home-replay" onClick={replay} aria-label="Pusti uvod ponovo" title="Pusti uvod ponovo">
-              <FiRotateCcw aria-hidden="true" /> Pusti uvod ponovo
-            </button>
-          </>
-        )}
-      </section>
+        </section>
+
+        <aside className="home-about" ref={aboutRef} aria-label="O FitMapi">
+          {split && <About instant={instant} onStart={goToMap} />}
+        </aside>
+      </div>
 
       {/* mapa se učitava odmah (u pozadini), da prelaz bude bez kašnjenja */}
       <section className="home-map" ref={mapRef} aria-label="Mapa teretana">
         <MapExplorer embedded />
       </section>
+    </div>
+  );
+}
 
-      {!skipGone && (
-        <button className={`onb-skip ${split ? 'leaving' : ''}`} onClick={skip}>
-          Preskoči <FiArrowRight aria-hidden="true" />
-        </button>
-      )}
+/* Desna strana: O nama + CTA — fokus na zakazivanju prvog treninga */
+function About({ instant, onStart }) {
+  return (
+    <div className={`about ${instant ? 'instant' : ''}`}>
+      <span className="about-eyebrow">Tvoj prvi trening</span>
+      <h2 className="about-title">
+        Od odluke do prvog treninga — <span className="about-mark">za 5 minuta.</span>
+      </h2>
+      <p className="about-text">
+        Najteži deo je početak. Zato smo ga skratili: izaberi personalnog trenera u teretani blizu tebe, pogledaj
+        njegove slobodne termine i zakaži prvi trening odmah — bez poziva, dopisivanja i čekanja na odgovor.
+      </p>
+      <ul className="about-list">
+        <li>
+          <FiUser aria-hidden="true" /> Profil, iskustvo i cena svakog trenera
+        </li>
+        <li>
+          <FiCalendar aria-hidden="true" /> Slobodni termini za ovu nedelju, uživo
+        </li>
+        <li>
+          <FiCreditCard aria-hidden="true" /> Bez plaćanja unapred — plaćaš na licu mesta
+        </li>
+      </ul>
+      <button className="about-cta" onClick={onStart}>
+        Zakaži prvi trening
+        <span className="about-cta-icon">
+          <FiArrowRight aria-hidden="true" />
+        </span>
+      </button>
+      <div className="about-links">
+        <Link href="/treneri">ili izaberi direktno među trenerima →</Link>
+        <span className="about-note">Razgledanje je besplatno — nalog ti treba tek za zakazivanje.</span>
+      </div>
     </div>
   );
 }
@@ -509,25 +492,6 @@ function Steps({ instant, onDone }) {
           </div>
         </article>
       ))}
-    </div>
-  );
-}
-
-/* Završni poziv na akciju */
-function Cta({ instant, onShow, onStart }) {
-  const showRef = useRef(onShow);
-  showRef.current = onShow;
-  useEffect(() => {
-    if (instant) return;
-    const t = setTimeout(() => showRef.current?.(), 150);
-    return () => clearTimeout(t);
-  }, [instant]);
-  return (
-    <div className="onb-cta">
-      <p className="onb-cta-text">Spreman? Prvi korak je najteži — ostalo je na nama.</p>
-      <button className="onb-cta-btn" onClick={onStart}>
-        Zakaži svoj prvi trening <FiArrowRight aria-hidden="true" />
-      </button>
     </div>
   );
 }
