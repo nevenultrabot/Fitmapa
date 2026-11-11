@@ -112,9 +112,11 @@ export default function Intro() {
     if (!phase) return;
     const lock = phase !== 'split';
     if (lock) window.scrollTo(0, 0);
+    document.body.classList.toggle('intro-running', lock);
     document.documentElement.style.overflow = lock ? 'hidden' : '';
     return () => {
       document.documentElement.style.overflow = '';
+      document.body.classList.remove('intro-running');
     };
   }, [phase]);
 

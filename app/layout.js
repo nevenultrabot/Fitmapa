@@ -2,6 +2,7 @@ import { Manrope } from 'next/font/google';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import Header from '@/components/Header';
+import ChatLauncher from '@/components/ChatLauncher';
 
 const manrope = Manrope({ subsets: ['latin', 'latin-ext'], display: 'swap' });
 
@@ -24,6 +25,7 @@ export default function RootLayout({ children }) {
       <body className={manrope.className}>
         <Header />
         <main className="main">{children}</main>
+        <ChatLauncher />
       </body>
     </html>
   );

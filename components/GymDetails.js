@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FiClock, FiCreditCard, FiFileText, FiMapPin } from 'react-icons/fi';
+import { FiArrowUpRight, FiClock, FiCreditCard, FiFileText, FiMapPin } from 'react-icons/fi';
 import Lightbox from './Lightbox';
 import GymCover from './GymCover';
 import TrainerCard from './TrainerCard';
@@ -25,8 +25,25 @@ export default function GymDetails({ gym, showPageLink = false, showTrainers = t
 
   return (
     <div className="gym-details">
-      <GymCover gym={gym} className="gym-details-cover" />
-      <h1 className="sheet-title">{gym.name}</h1>
+      {showPageLink ? (
+        // slika i naziv vode na stranicu teretane
+        <Link href={`/teretane/${gym.id}`} className="gym-hero-link" aria-label={`Otvori stranicu teretane ${gym.name}`}>
+          <span className="gym-hero-cover">
+            <GymCover gym={gym} className="gym-details-cover" />
+            <span className="gym-hero-hint">
+              Otvori stranicu <FiArrowUpRight aria-hidden="true" />
+            </span>
+          </span>
+          <h1 className="sheet-title gym-hero-title">
+            {gym.name} <FiArrowUpRight aria-hidden="true" className="gym-hero-arrow" />
+          </h1>
+        </Link>
+      ) : (
+        <>
+          <GymCover gym={gym} className="gym-details-cover" />
+          <h1 className="sheet-title">{gym.name}</h1>
+        </>
+      )}
 
       <ul className="gym-facts">
         {gym.address && (
@@ -59,23 +76,22 @@ export default function GymDetails({ gym, showPageLink = false, showTrainers = t
         )}
       </ul>
 
-      {(gym.price_list_url || actions) && (
+      {(gym.price_list_url || actions || showPageLink) && (
         <div className="gym-actions">
           {gym.price_list_url && (
             <button className="btn btn-primary gym-price-btn" onClick={() => setPriceOpen(true)}>
               <FiFileText aria-hidden="true" /> Cenovnik
             </button>
           )}
+          {showPageLink && (
+            <Link href={`/teretane/${gym.id}`} className="btn gym-page-btn">
+              <FiArrowUpRight aria-hidden="true" /> Stranica teretane
+            </Link>
+          )}
           {actions}
         </div>
       )}
       {priceOpen && <Lightbox src={gym.price_list_url} title={`Cenovnik — ${gym.name}`} onClose={() => setPriceOpen(false)} />}
-
-      {showPageLink && (
-        <Link href={`/teretane/${gym.id}`} className="small gym-page-link">
-          Otvori stranicu teretane →
-        </Link>
-      )}
 
       {showTrainers && (<>
       <h2 className="section-title">Personalni treneri {trainers?.length ? `(${trainers.length})` : ''}</h2>

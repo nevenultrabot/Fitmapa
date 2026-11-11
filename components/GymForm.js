@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { FiImage, FiType } from 'react-icons/fi';
 import MapView from '@/components/MapView';
 import { getSupabase, errorMessage } from '@/lib/supabase';
 import { uploadPhoto } from '@/lib/upload';
@@ -19,6 +20,10 @@ export default function GymForm({ userId, gym, onCancel, onSaved, linkTrainer = 
   });
   const [image, setImage] = useState(gym?.image_url || null);
   const [priceList, setPriceList] = useState(gym?.price_list_url || null);
+  // kako se prikazuju cene: 'text' (kratak opis) ili 'image' (slika cenovnika); null = još nije izabrano
+  const [priceMode, setPriceMode] = useState(
+    gym ? (gym.price_list_url ? 'image' : gym.membership ? 'text' : null) : null
+  );
   const [point, setPoint] = useState(gym ? { lat: gym.lat, lng: gym.lng } : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -45,15 +50,20 @@ export default function GymForm({ userId, gym, onCancel, onSaved, linkTrainer = 
       setError('Klikni na mapu da označiš gde se teretana nalazi.');
       return;
     }
+    if (priceMode === 'image' && !priceList) {
+      setError('Otpremi sliku cenovnika ili izaberi da cene upišeš kao tekst.');
+      return;
+    }
     setBusy(true);
     const supabase = getSupabase();
     const values = {
       name: f.name.trim(),
       address: f.address.trim() || null,
       opening_hours: f.opening_hours.trim(),
-      membership: f.membership.trim(),
+      // čuva se samo jedan način prikaza cena
+      membership: priceMode === 'text' ? f.membership.trim() : '',
       image_url: image,
-      price_list_url: priceList,
+      price_list_url: priceMode === 'image' ? priceList : null,
       lat: point.lat,
       lng: point.lng,
     };
@@ -75,32 +85,14 @@ export default function GymForm({ userId, gym, onCancel, onSaved, linkTrainer = 
     <form className="form add-gym" onSubmit={submit}>
       <h3 className="sub-title">{gym ? `Uredi: ${gym.name}` : 'Nova teretana'}</h3>
 
-      <div className="gym-form-images">
+      <div className="field">
+        <span className="field-label">Slika teretane</span>
         <div className="gym-form-image">
-          {image ? <img src={image} alt="" /> : <span className="small muted">Bez slike</span>}
+          {image ? <img src={image} alt="" /> : <span className="gym-form-empty">Bez slike</span>}
           <label className="btn btn-small">
-            {image ? 'Promeni sliku teretane' : 'Dodaj sliku teretane'}
+            {image ? 'Promeni sliku' : 'Dodaj sliku'}
             <input type="file" accept="image/*" hidden onChange={(e) => onFile(e, setImage)} disabled={busy} />
           </label>
-        </div>
-        <div className="gym-form-image">
-          {priceList ? <img src={priceList} alt="" /> : <span className="small muted">Bez cenovnika</span>}
-          <label className="btn btn-small">
-            {priceList ? 'Promeni cenovnik' : 'Dodaj cenovnik (slika)'}
-            {/* cenovnik u većoj rezoluciji da bi se tekst lepo čitao */}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => onFile(e, setPriceList, { maxSize: 2400, quality: 0.9 })}
-              disabled={busy}
-            />
-          </label>
-          {priceList && (
-            <button type="button" className="btn btn-small btn-ghost" onClick={() => setPriceList(null)}>
-              Ukloni
-            </button>
-          )}
         </div>
       </div>
 
@@ -118,10 +110,58 @@ export default function GymForm({ userId, gym, onCancel, onSaved, linkTrainer = 
         <span>Radno vreme</span>
         <input className="input" value={f.opening_hours} onChange={set('opening_hours')} placeholder="Pon–Pet 07–23h · Sub 09–21h · Ned 10–18h" />
       </label>
-      <label className="field">
-        <span>Članarina (kratko)</span>
-        <input className="input" value={f.membership} onChange={set('membership')} placeholder="Mesečna 4.000 RSD · Dnevna 500 RSD" />
-      </label>
+
+      {/* Cene: tekst ILI slika cenovnika */}
+      <fieldset className="field price-mode">
+        <legend>Kako želiš da prikažeš cene?</legend>
+        <div className="price-mode-options">
+          <button
+            type="button"
+            className={priceMode === 'text' ? 'price-option active' : 'price-option'}
+            onClick={() => setPriceMode('text')}
+          >
+            <FiType aria-hidden="true" />
+            <strong>Tekst</strong>
+            <span>Kratko, npr. „Mesečna 4.000 RSD"</span>
+          </button>
+          <button
+            type="button"
+            className={priceMode === 'image' ? 'price-option active' : 'price-option'}
+            onClick={() => setPriceMode('image')}
+          >
+            <FiImage aria-hidden="true" />
+            <strong>Slika cenovnika</strong>
+            <span>Screenshot ili fotografija cenovnika</span>
+          </button>
+        </div>
+
+        {priceMode === 'text' && (
+          <input
+            className="input"
+            value={f.membership}
+            onChange={set('membership')}
+            placeholder="Mesečna 4.000 RSD · Dnevna 500 RSD"
+            autoFocus
+          />
+        )}
+        {priceMode === 'image' && (
+          <div className="gym-form-image">
+            {priceList ? <img src={priceList} alt="" /> : <span className="gym-form-empty">Još nije otpremljen</span>}
+            <label className="btn btn-small">
+              {priceList ? 'Promeni cenovnik' : 'Otpremi cenovnik'}
+              {/* veća rezolucija da bi se tekst na cenovniku lepo čitao */}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => onFile(e, setPriceList, { maxSize: 2400, quality: 0.9 })}
+                disabled={busy}
+              />
+            </label>
+          </div>
+        )}
+      </fieldset>
+
       <p className="small">{point ? '✓ Lokacija označena (klikni ponovo da je pomeriš)' : 'Klikni na mapu tačno gde je teretana:'}</p>
       <MapView
         gyms={[]}

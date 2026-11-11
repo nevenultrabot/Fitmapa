@@ -54,7 +54,7 @@ export default function MapView({
         style: MAP_STYLE,
         center: [center.lng, center.lat],
         zoom,
-        attributionControl: { compact: true },
+        attributionControl: false,
         dragRotate: false,   // bez rotiranja mape
         pitchWithRotate: false,
         // na Početnoj: točkić / jedan prst skroluju stranicu;
@@ -71,6 +71,7 @@ export default function MapView({
       map.touchPitch?.disable();
       if (touch) map.doubleClickZoom?.disable();
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
       // Navođenje izvora mape je obavezno (licenca OpenStreetMap), ali ga skupljamo
       // u malu ikonicu ⓘ — tekst se vidi tek na klik
       map.once('load', () => {
