@@ -5,7 +5,6 @@ import { FiChevronLeft, FiList } from 'react-icons/fi';
 import MapView from '@/components/MapView';
 import GymCover from '@/components/GymCover';
 import GymDetails from '@/components/GymDetails';
-import Link from 'next/link';
 import { getSupabase } from '@/lib/supabase';
 import { GYM_FIELDS } from '@/lib/data';
 
@@ -103,19 +102,6 @@ export default function MapExplorer({ embedded = false }) {
             <>
               <div className="sheet-title-row">
                 <h2 className="sheet-title">Teretane</h2>
-                {!embedded && (
-                <Link
-                  href="/"
-                  className="link-btn"
-                  onClick={() => {
-                    try {
-                      sessionStorage.removeItem('fitmapa-intro');
-                    } catch {}
-                  }}
-                >
-                  Kako funkcioniše?
-                </Link>
-                )}
               </div>
               <p className="muted small">Izaberi teretanu na mapi ili sa liste da vidiš njene personalne trenere.</p>
               <input

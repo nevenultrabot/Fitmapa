@@ -71,6 +71,13 @@ export default function MapView({
       map.touchPitch?.disable();
       if (touch) map.doubleClickZoom?.disable();
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+      // Navođenje izvora mape je obavezno (licenca OpenStreetMap), ali ga skupljamo
+      // u malu ikonicu ⓘ — tekst se vidi tek na klik
+      map.once('load', () => {
+        const attrib = containerRef.current?.querySelector('.maplibregl-ctrl-attrib');
+        attrib?.classList.remove('maplibregl-compact-show');
+        attrib?.removeAttribute('open');
+      });
       map.on('click', (e) => callbacks.current.onMapClick?.({ lng: e.lngLat.lng, lat: e.lngLat.lat }));
       mapRef.current = map;
       // kad kontejner promeni veličinu (npr. animacija na početnoj), mapa se prilagodi
