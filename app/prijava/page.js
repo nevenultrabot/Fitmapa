@@ -220,11 +220,6 @@ export default function LoginPage() {
               <label className="field">
                 <span>Telefon</span>
                 <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="06x xxx xxxx" />
-                <span className="small muted">
-                  {role === 'trainer'
-                    ? 'Biće prikazan na tvom javnom profilu (možeš ga promeniti kasnije).'
-                    : 'Vidi ga samo trener kod koga zakažeš termin.'}
-                </span>
               </label>
             </>
           )}

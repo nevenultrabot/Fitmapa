@@ -2,34 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Avatar from '@/components/Avatar';
-import MapView from '@/components/MapView';
+import GymForm from '@/components/GymForm';
 import { getSupabase, errorMessage } from '@/lib/supabase';
+import { uploadPhoto } from '@/lib/upload';
 
 const MAX_PHOTOS = 8;
-
-// Smanjuje sliku na max 1600px i pretvara u JPEG (telefonske slike su često > 5 MB)
-async function resizeImage(file, maxSize = 1600) {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    return await new Promise((resolve) => canvas.toBlob((b) => resolve(b || file), 'image/jpeg', 0.85));
-  } catch {
-    return file;
-  }
-}
-
-async function uploadPhoto(userId, file) {
-  const blob = await resizeImage(file);
-  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const storage = getSupabase().storage.from('photos');
-  const { error } = await storage.upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-  if (error) throw error;
-  return storage.getPublicUrl(path).data.publicUrl;
-}
 
 export default function ProfileEditor({ userId, profile, trainer, myGyms, onSaved }) {
   const [form, setForm] = useState({
@@ -379,110 +356,5 @@ function GymPicker({ userId, myGyms, onChanged }) {
         />
       )}
     </section>
-  );
-}
-
-// Dodavanje nove ili izmena postojeće teretane
-function GymForm({ userId, gym, onCancel, onSaved }) {
-  const [f, setF] = useState({
-    name: gym?.name || '',
-    address: gym?.address || '',
-    opening_hours: gym?.opening_hours || '',
-    membership: gym?.membership || '',
-  });
-  const [image, setImage] = useState(gym?.image_url || null);
-  const [point, setPoint] = useState(gym ? { lat: gym.lat, lng: gym.lng } : null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
-
-  async function onImage(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setBusy(true);
-    try {
-      setImage(await uploadPhoto(userId, file));
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-    setBusy(false);
-    e.target.value = '';
-  }
-
-  async function submit(e) {
-    e.preventDefault();
-    setError('');
-    if (!point) {
-      setError('Klikni na mapu da označiš gde se teretana nalazi.');
-      return;
-    }
-    setBusy(true);
-    const supabase = getSupabase();
-    const values = {
-      name: f.name.trim(),
-      address: f.address.trim() || null,
-      opening_hours: f.opening_hours.trim(),
-      membership: f.membership.trim(),
-      image_url: image,
-      lat: point.lat,
-      lng: point.lng,
-    };
-    let err;
-    if (gym) {
-      ({ error: err } = await supabase.from('gyms').update(values).eq('id', gym.id));
-    } else {
-      const { data, error } = await supabase.from('gyms').insert({ ...values, created_by: userId }).select('id').single();
-      err = error;
-      if (!err) ({ error: err } = await supabase.from('trainer_gyms').insert({ trainer_id: userId, gym_id: data.id }));
-    }
-    setBusy(false);
-    if (err) setError(errorMessage(err));
-    else onSaved();
-  }
-
-  return (
-    <form className="form add-gym" onSubmit={submit}>
-      <h3 className="sub-title">{gym ? `Uredi: ${gym.name}` : 'Nova teretana'}</h3>
-      <div className="gym-form-image">
-        {image ? <img src={image} alt="" /> : <span className="small muted">Bez slike</span>}
-        <label className="btn btn-small">
-          {busy ? 'Otpremam…' : image ? 'Promeni sliku' : 'Dodaj sliku'}
-          <input type="file" accept="image/*" hidden onChange={onImage} disabled={busy} />
-        </label>
-      </div>
-      <div className="row">
-        <label className="field">
-          <span>Naziv teretane</span>
-          <input className="input" value={f.name} onChange={set('name')} required />
-        </label>
-        <label className="field">
-          <span>Tačna adresa</span>
-          <input className="input" value={f.address} onChange={set('address')} placeholder="Ulica i broj, Novi Sad" />
-        </label>
-      </div>
-      <label className="field">
-        <span>Radno vreme</span>
-        <input className="input" value={f.opening_hours} onChange={set('opening_hours')} placeholder="Pon–Pet 07–23h · Sub 09–21h · Ned 10–18h" />
-      </label>
-      <label className="field">
-        <span>Članarina</span>
-        <input className="input" value={f.membership} onChange={set('membership')} placeholder="Mesečna 4.000 RSD · Dnevna 500 RSD" />
-      </label>
-      <p className="small">{point ? '✓ Lokacija označena (klikni ponovo da je pomeriš)' : 'Klikni na mapu tačno gde je teretana:'}</p>
-      <MapView
-        gyms={[]}
-        onMapClick={setPoint}
-        pickedPoint={point}
-        center={point || undefined}
-        showLocate={false}
-        zoom={gym ? 15 : 13}
-        className="map-small"
-      />
-      {error && <p className="alert alert-error">{error}</p>}
-      <div className="modal-actions">
-        <button className="btn btn-primary" disabled={busy}>{busy ? 'Čuvam…' : gym ? 'Sačuvaj teretanu' : 'Dodaj teretanu'}</button>
-        <button type="button" className="btn" onClick={onCancel}>Odustani</button>
-      </div>
-    </form>
   );
 }

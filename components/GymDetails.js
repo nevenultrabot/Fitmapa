@@ -2,23 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FiClock, FiCreditCard, FiMapPin } from 'react-icons/fi';
+import { FiClock, FiCreditCard, FiFileText, FiMapPin } from 'react-icons/fi';
+import Lightbox from './Lightbox';
 import GymCover from './GymCover';
 import TrainerCard from './TrainerCard';
 import { loadTrainers } from '@/lib/data';
 
 // Informacije o teretani + lista njenih trenera
-export default function GymDetails({ gym, showPageLink = false }) {
+export default function GymDetails({ gym, showPageLink = false, showTrainers = true, actions = null }) {
   const [trainers, setTrainers] = useState(null);
+  const [priceOpen, setPriceOpen] = useState(false);
 
   useEffect(() => {
+    if (!showTrainers) return;
     let active = true;
     setTrainers(null);
     loadTrainers({ gymId: gym.id }).then((list) => active && setTrainers(list));
     return () => {
       active = false;
     };
-  }, [gym.id]);
+  }, [gym.id, showTrainers]);
 
   return (
     <div className="gym-details">
@@ -56,12 +59,25 @@ export default function GymDetails({ gym, showPageLink = false }) {
         )}
       </ul>
 
+      {(gym.price_list_url || actions) && (
+        <div className="gym-actions">
+          {gym.price_list_url && (
+            <button className="btn btn-primary gym-price-btn" onClick={() => setPriceOpen(true)}>
+              <FiFileText aria-hidden="true" /> Cenovnik
+            </button>
+          )}
+          {actions}
+        </div>
+      )}
+      {priceOpen && <Lightbox src={gym.price_list_url} title={`Cenovnik — ${gym.name}`} onClose={() => setPriceOpen(false)} />}
+
       {showPageLink && (
         <Link href={`/teretane/${gym.id}`} className="small gym-page-link">
           Otvori stranicu teretane →
         </Link>
       )}
 
+      {showTrainers && (<>
       <h2 className="section-title">Personalni treneri {trainers?.length ? `(${trainers.length})` : ''}</h2>
       {trainers === null ? (
         <p className="muted">Učitavam…</p>
@@ -76,6 +92,7 @@ export default function GymDetails({ gym, showPageLink = false }) {
           ))}
         </ul>
       )}
+      </>)}
     </div>
   );
 }
