@@ -16,6 +16,37 @@ import { useSession } from '@/lib/useSession';
 const PROPERTY_ID = process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID || '6af45a60a60c2e3c4475479e';
 const WIDGET_ID = process.env.NEXT_PUBLIC_TAWK_WIDGET_ID || '1k75822dv';
 
+// Tawk menja naslov taba u "1 nova poruka" kad stigne poruka — to blokiramo,
+// naslov taba uvek ostaje naš (broj nepročitanih se vidi samo na našem dugmetu).
+const isChatTitle = (v) => /poruk|message/i.test(String(v || ''));
+
+function guardTabTitle() {
+  if (window.__fitmapaTitleGuard) return;
+  window.__fitmapaTitleGuard = true;
+
+  const desc = Object.getOwnPropertyDescriptor(Document.prototype, 'title');
+  if (desc?.get && desc?.set) {
+    Object.defineProperty(document, 'title', {
+      configurable: true,
+      get: () => desc.get.call(document),
+      set: (v) => {
+        if (!isChatTitle(v)) desc.set.call(document, v);
+      },
+    });
+  }
+
+  // rezerva: ako bi naslov ipak bio promenjen direktno, vrati poslednji dobar
+  let good = isChatTitle(document.title) ? 'FitMapa' : document.title;
+  new MutationObserver(() => {
+    const now = desc?.get ? desc.get.call(document) : document.title;
+    if (isChatTitle(now)) {
+      if (desc?.set) desc.set.call(document, good);
+    } else {
+      good = now;
+    }
+  }).observe(document.head, { subtree: true, childList: true, characterData: true });
+}
+
 export default function ChatLauncher() {
   const { loading, user, profile } = useSession();
   const [ready, setReady] = useState(false);
@@ -50,6 +81,8 @@ export default function ChatLauncher() {
       setOpen(false);
     };
     api.onUnreadCountChanged = (count) => setUnread(count || 0);
+
+    guardTabTitle();
 
     const s = document.createElement('script');
     s.async = true;
