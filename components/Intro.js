@@ -52,6 +52,8 @@ export default function Intro() {
   const [phase, setPhase] = useState(null); // logo | type | steps | done
   const [instant, setInstant] = useState(false);
   const [run, setRun] = useState(0);
+  // posle "Pusti uvod ponovo" desna strana ("O nama") ostaje na mestu — ponavlja se samo levi deo
+  const [replayed, setReplayed] = useState(false);
   const mapRef = useRef(null);
   const aboutRef = useRef(null);
 
@@ -115,13 +117,14 @@ export default function Intro() {
   const replay = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setInstant(false);
+    setReplayed(true);
     setRun((r) => r + 1);
     setPhase('logo');
   }, []);
 
   if (!phase) return <div className="home" />;
 
-  const split = phase !== 'logo';
+  const split = phase !== 'logo' || replayed;
   const compact = phase === 'steps' || phase === 'done';
   const done = phase === 'done';
 
@@ -129,7 +132,7 @@ export default function Intro() {
     <div className={`home ${split ? 'split' : ''} ${instant ? 'instant' : ''}`}>
       <div className="home-hero">
         <section className="home-intro">
-          <div key={`c${run}${split}`} className={`home-intro-content ${compact ? 'is-compact' : ''} ${split ? 'zoomed' : ''}`}>
+          <div key={`c${run}${split}${phase === 'logo'}`} className={`home-intro-content ${compact ? 'is-compact' : ''} ${split ? 'zoomed' : ''}`}>
             {phase === 'logo' ? (
               <LogoStage />
             ) : (
@@ -171,7 +174,7 @@ export default function Intro() {
         </section>
 
         <aside className="home-about" ref={aboutRef} aria-label="O FitMapi">
-          {split && <About instant={instant} onStart={goToMap} />}
+          {split && <About instant={instant || replayed} onStart={goToMap} />}
         </aside>
       </div>
 

@@ -1218,7 +1218,7 @@ img.gym-details-cover { display: block; }
   transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .chat-launcher.ready { opacity: 1; transform: none; pointer-events: auto; }
-body.intro-running .chat-launcher { opacity: 0; transform: translateY(16px); pointer-events: none; }
+body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transform: translateY(16px); pointer-events: none; }
 
 .chat-avatar-btn {
   position: relative; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%;

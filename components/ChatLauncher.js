@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import { LogoMark } from './Logo';
+import { usePathname } from 'next/navigation';
 import { useSession } from '@/lib/useSession';
 
 /**
@@ -47,8 +48,39 @@ function guardTabTitle() {
   }).observe(document.head, { subtree: true, childList: true, characterData: true });
 }
 
+// Na početnoj se chat pojavljuje tek kad posetilac prvi put skroluje do druge sekcije
+// (na računaru mapa, na telefonu "O nama"). Posle toga ostaje vidljiv do kraja posete.
+const REVEAL_KEY = 'fitmapa-chat-shown';
+
+function useHomeReveal(isHome) {
+  const [shown, setShown] = useState(true);
+
+  useEffect(() => {
+    if (!isHome) return setShown(true);
+    try {
+      if (sessionStorage.getItem(REVEAL_KEY) === '1') return setShown(true);
+    } catch {}
+    setShown(false);
+
+    const check = () => {
+      const second = document.querySelector(window.innerWidth >= 900 ? '.home-map' : '.home-about');
+      if (!second || second.getBoundingClientRect().top > window.innerHeight - 40) return;
+      setShown(true);
+      try {
+        sessionStorage.setItem(REVEAL_KEY, '1');
+      } catch {}
+      window.removeEventListener('scroll', check);
+    };
+    window.addEventListener('scroll', check, { passive: true });
+    return () => window.removeEventListener('scroll', check);
+  }, [isHome]);
+
+  return shown;
+}
+
 export default function ChatLauncher() {
   const { loading, user, profile } = useSession();
+  const shown = useHomeReveal(usePathname() === '/');
   const [ready, setReady] = useState(false);
   const [bubble, setBubble] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -94,14 +126,14 @@ export default function ChatLauncher() {
 
   // Oblačić se sam pojavi posle par sekundi, pa se skloni (samo na računaru — na telefonu bi prekrio mapu)
   useEffect(() => {
-    if (!ready || window.innerWidth < 900) return;
+    if (!ready || !shown || window.innerWidth < 900) return;
     const show = setTimeout(() => setBubble(true), 2500);
     const hide = setTimeout(() => setBubble(false), 12000);
     return () => {
       clearTimeout(show);
       clearTimeout(hide);
     };
-  }, [ready]);
+  }, [ready, shown]);
 
   if (!PROPERTY_ID || !WIDGET_ID) return null;
 
@@ -115,7 +147,7 @@ export default function ChatLauncher() {
   }
 
   return (
-    <div className={`chat-launcher ${ready ? 'ready' : ''} ${open ? 'chat-is-open' : ''}`}>
+    <div className={`chat-launcher ${ready ? 'ready' : ''} ${open ? 'chat-is-open' : ''} ${shown ? '' : 'chat-wait'}`}>
       {bubble && (
         <div className="chat-bubble" role="status">
           <button className="chat-bubble-text" onClick={openChat}>
