@@ -1413,3 +1413,70 @@ body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transf
   animation: cursorRipple 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 @keyframes cursorRipple { from { transform: scale(0.4); opacity: 1; } to { transform: scale(3.4); opacity: 0; } }
+
+/* opciona polja u profilu trenera */
+.field-opt { font-weight: 500; font-size: 0.75rem; color: var(--muted); margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #ecece6; vertical-align: 1px; }
+.optional-note { margin: 4px 0 -2px; padding: 10px 12px; border-radius: 10px; background: #f7f8f2; border: 1px dashed var(--line); }
+
+/* =====================================================================
+   v28: vežbači trenera + istorija treninga
+   ===================================================================== */
+.avatar-sm { width: 34px; height: 34px; font-size: 0.8rem; }
+
+/* profil trenera */
+.add-trainer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.add-trainer .btn { display: inline-flex; align-items: center; gap: 7px; }
+.add-trainer-on { background: #fbfdf2; border-color: var(--ink); }
+.add-trainer-error { color: var(--danger); }
+.hero2-stat-btn {
+  display: flex; flex-direction: column; align-items: inherit; gap: inherit;
+  background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer;
+}
+.hero2-stat-btn:hover strong { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+
+.clients-modal { max-width: 420px; }
+.clients-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.clients-list, .client-rows { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; }
+.clients-list { max-height: 60vh; overflow: auto; }
+.clients-list li, .client-rows li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.clients-list li:first-child, .client-rows li:first-child { border-top: 0; }
+.clients-initial {
+  flex: none; width: 36px; height: 36px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ink); color: var(--accent); font-weight: 800;
+}
+.client-rows-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.clients-panel { display: flex; flex-direction: column; gap: 16px; }
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px;
+  margin-left: 6px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 0.7rem; font-weight: 800; vertical-align: 1px;
+}
+
+/* istorija */
+.history-private { display: flex; align-items: center; gap: 6px; margin-top: -6px; }
+.history-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+.history-filters { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.history-filters .field { flex: 1 1 180px; margin: 0; }
+.history-csv { display: inline-flex; align-items: center; gap: 8px; }
+.history-month { margin-bottom: 14px; }
+.history-month-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.history-month-head h2 { margin: 0; font-size: 1.15rem; text-transform: capitalize; }
+.history-month-head .pill { margin: 0; }
+.history-counts { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 2px; }
+.history-counts b { margin-left: 4px; }
+.history-rows { list-style: none; padding: 0; margin: 8px 0 0; }
+.history-rows li { display: flex; gap: 16px; padding: 10px 0; border-top: 1px solid var(--line); }
+.history-date { flex: none; width: 108px; display: flex; flex-direction: column; text-transform: capitalize; }
+.history-who { display: flex; flex-direction: column; min-width: 0; }
+.my-trainers ul { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.my-trainers a { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; font-weight: 700; background: #fff; }
+.my-trainers a:hover { border-color: var(--ink); }
+.my-trainers .pill { margin-left: 0; }
+@media (max-width: 520px) {
+  .history-stats { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .history-stats .stat { padding: 8px 10px; }
+  .history-csv { width: 100%; justify-content: center; }
+}
+.hero2-stats { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; }
+.hero2-stats > .hero2-stat-btn { display: flex; flex-direction: column; align-items: center; padding: 12px 6px; text-align: center; border-left: 1px solid var(--line); }
+.tabs-wide { max-width: 640px; }

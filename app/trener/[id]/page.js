@@ -8,13 +8,16 @@ import { getSupabase, errorMessage } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
 import { useWeek } from '@/lib/useWeek';
 import ContactButtons from '@/components/ContactButtons';
+import { useTrainerClients, AddTrainerButton, ClientsModal } from '@/components/TrainerClients';
 import { dayKey, formatDateTime, formatPrice, formatTime } from '@/lib/format';
 
 export default function TrainerProfilePage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user } = useSession();
+  const { user, profile } = useSession();
   const week = useWeek();
+  const clients = useTrainerClients(id, user);
+  const [showClients, setShowClients] = useState(false);
 
   const [trainer, setTrainer] = useState(undefined);
   const [slots, setSlots] = useState([]);
@@ -122,6 +125,14 @@ export default function TrainerProfilePage() {
               </div>
             )}
             <ContactButtons trainer={trainer} />
+            {!isOwn && profile?.role !== 'trainer' && (
+              <AddTrainerButton
+                trainerId={id}
+                relation={clients.relation}
+                onChange={clients.reload}
+                onNeedLogin={user ? null : () => router.push(`/prijava?next=/trener/${id}`)}
+              />
+            )}
           </div>
         </div>
 
@@ -142,6 +153,10 @@ export default function TrainerProfilePage() {
             <strong>{gyms.length}</strong>
             <span>{gyms.length === 1 ? 'teretana' : 'teretane'}</span>
           </div>
+          <button type="button" className="hero2-stat-btn" onClick={() => setShowClients(true)}>
+            <strong>{clients.list.length}</strong>
+            <span>{clients.list.length === 1 ? 'vežbač' : 'vežbača'}</span>
+          </button>
         </div>
 
         {(trainer.price_note || trainer.certificates) && (
@@ -271,6 +286,8 @@ export default function TrainerProfilePage() {
           )}
         </aside>
       </div>
+
+      {showClients && <ClientsModal name={name} list={clients.list} onClose={() => setShowClients(false)} />}
 
       {picked && (
         <BookingDialog slot={picked} gyms={gyms} trainerName={name} onClose={() => setPicked(null)} onBooked={() => loadSlots()} />

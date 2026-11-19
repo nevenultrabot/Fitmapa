@@ -10,10 +10,12 @@ import Schedule from '@/components/panel/Schedule';
 import AddSlots from '@/components/panel/AddSlots';
 import ProfileEditor from '@/components/panel/ProfileEditor';
 import PushCard from '@/components/panel/PushCard';
+import Clients from '@/components/panel/Clients';
 
 const TABS = [
   { id: 'schedule', label: 'Raspored' },
   { id: 'add', label: 'Dodaj termine' },
+  { id: 'clients', label: 'Vežbači' },
   { id: 'profile', label: 'Profil' },
 ];
 
@@ -25,6 +27,7 @@ export default function TrainerPanelPage() {
   const [presetDay, setPresetDay] = useState(null);
   const [trainer, setTrainer] = useState(null);
   const [myGyms, setMyGyms] = useState([]);
+  const [requestCount, setRequestCount] = useState(0);
 
   const loadTrainer = useCallback(async () => {
     if (!user) return;
@@ -46,6 +49,14 @@ export default function TrainerPanelPage() {
     if (!loading && !user) router.push('/prijava?next=/panel');
     loadTrainer();
   }, [loading, user, router, loadTrainer]);
+
+  // broj novih zahteva vežbača (za značku na kartici "Vežbači")
+  useEffect(() => {
+    if (!user) return;
+    getSupabase()
+      .rpc('my_client_requests')
+      .then(({ data }) => setRequestCount((data || []).length));
+  }, [user]);
 
   // Novi trener: prvo ga pošalji na profil
   useEffect(() => {
@@ -111,6 +122,7 @@ export default function TrainerPanelPage() {
               setTab(t.id);
             }}>
             {t.label}
+            {t.id === 'clients' && requestCount > 0 && <span className="tab-badge">{requestCount}</span>}
           </button>
         ))}
       </div>
@@ -135,6 +147,7 @@ export default function TrainerPanelPage() {
           onNeedGym={() => setTab('profile')}
         />
       )}
+      {tab === 'clients' && <Clients userId={user.id} onCountChange={setRequestCount} />}
       {tab === 'profile' && (
         <ProfileEditor userId={user.id} profile={profile} trainer={trainer} myGyms={myGyms} onSaved={loadTrainer} />
       )}

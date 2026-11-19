@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FiMenu, FiX } from 'react-icons/fi';
 import Logo from './Logo';
+import UserMenu from './UserMenu';
 import { useSession } from '@/lib/useSession';
 import { getSupabase } from '@/lib/supabase';
 
@@ -50,20 +51,7 @@ export default function Header() {
               Prijava
             </Link>
           ) : (
-            <>
-              {profile?.role === 'trainer' ? (
-                <Link href="/panel" className={`nav-link ${isActive('/panel') ? 'active' : ''}`}>
-                  Moj panel
-                </Link>
-              ) : (
-                <Link href="/moji-termini" className={`nav-link ${isActive('/moji-termini') ? 'active' : ''}`}>
-                  Moji termini
-                </Link>
-              )}
-              <button className="nav-link nav-logout" onClick={logout}>
-                Odjava
-              </button>
-            </>
+            <UserMenu user={user} profile={profile} onLogout={logout} onNavigate={() => setOpen(false)} />
           )}
         </div>
       </nav>
