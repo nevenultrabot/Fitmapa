@@ -41,7 +41,7 @@ export default function GymPage() {
     );
 
   // administrator i trener koji je dodao teretanu mogu da je urede (cenovnik, slika, radno vreme…)
-  const canEdit = Boolean(user && (profile?.is_admin || gym.created_by === user.id));
+  const canEdit = Boolean(user && profile?.is_admin); // samo administrator menja teretanu
 
   return (
     <div className="page page-wide">

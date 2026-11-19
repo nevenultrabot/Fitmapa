@@ -124,7 +124,7 @@ export default function ProfileEditor({ userId, profile, trainer, myGyms, onSave
     <div className="profile-editor">
       {message && <p className={`alert alert-${message.type}`}>{message.text}</p>}
 
-      <GymPicker userId={userId} myGyms={myGyms} onChanged={onSaved} />
+      <GymPicker userId={userId} myGyms={myGyms} isAdmin={Boolean(profile?.is_admin)} onChanged={onSaved} />
 
       <form className="card form" onSubmit={save}>
         <h2 className="section-title">Javni profil</h2>
@@ -239,7 +239,7 @@ export default function ProfileEditor({ userId, profile, trainer, myGyms, onSave
   );
 }
 
-function GymPicker({ userId, myGyms, onChanged }) {
+function GymPicker({ userId, myGyms, isAdmin, onChanged }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -293,7 +293,8 @@ function GymPicker({ userId, myGyms, onChanged }) {
     onChanged();
   }
 
-  const canEdit = (g) => g.created_by === userId || !g.created_by;
+  // podatke o teretani (naziv, adresa, cene…) menja samo administrator
+  const canEdit = () => isAdmin;
   const noPrimary = myGyms.length > 1 && !myGyms.some((g) => g.is_primary);
 
   return (
