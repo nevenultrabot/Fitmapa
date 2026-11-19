@@ -11,6 +11,9 @@ const STATUS_LABEL = {
   confirmed: 'Potvrđen',
   cancelled_by_client: 'Otkazao si',
   cancelled_by_trainer: 'Trener je otkazao',
+  pending: 'Čeka potvrdu',
+  declined: 'Trener je odbio zahtev',
+  expired: 'Trener nije odgovorio na vreme',
 };
 
 export default function MyBookingsPage() {
@@ -24,7 +27,7 @@ export default function MyBookingsPage() {
     const supabase = getSupabase();
     const { data } = await supabase
       .from('bookings')
-      .select('id, status, note, created_at, trainer_id, slots(starts_at, ends_at, gyms(name)), trainers(profiles!trainers_id_fkey(full_name))')
+      .select('id, status, note, created_at, expires_at, trainer_id, place:gyms(name), slots(starts_at, ends_at, gyms(name)), trainers(profiles!trainers_id_fkey(full_name))')
       .eq('client_id', user.id)
       .order('created_at', { ascending: false });
     const list = (data || []).sort((x, y) => new Date(y.slots?.starts_at) - new Date(x.slots?.starts_at));
@@ -36,17 +39,22 @@ export default function MyBookingsPage() {
     load();
   }, [loading, user, load, router]);
 
-  async function cancel(id) {
-    if (!window.confirm('Sigurno želiš da otkažeš ovaj termin?')) return;
+  async function cancel(id, pending) {
+    if (!window.confirm(pending ? 'Sigurno želiš da povučeš zahtev?' : 'Sigurno želiš da otkažeš ovaj termin?')) return;
     const { error } = await getSupabase().rpc('cancel_booking', { p_booking_id: id });
-    setMessage(error ? { type: 'error', text: errorMessage(error) } : { type: 'ok', text: 'Termin je otkazan.' });
+    setMessage(
+      error ? { type: 'error', text: errorMessage(error) } : { type: 'ok', text: pending ? 'Zahtev je povučen.' : 'Termin je otkazan.' }
+    );
     load();
   }
 
   if (loading || bookings === null) return <div className="page"><p className="muted">Učitavam…</p></div>;
 
   const now = Date.now();
-  const upcoming = bookings.filter((b) => b.status === 'confirmed' && new Date(b.slots?.starts_at).getTime() > now);
+  const upcoming = bookings.filter(
+    (b) => (b.status === 'confirmed' || b.status === 'pending') && new Date(b.slots?.starts_at).getTime() > now
+  );
+  const placeOf = (b) => b.place?.name || b.slots?.gyms?.name;
   const past = bookings.filter((b) => !upcoming.includes(b));
 
   return (
@@ -67,12 +75,18 @@ export default function MyBookingsPage() {
                 <strong>{formatDateTime(b.slots.starts_at)} – {formatTime(b.slots.ends_at)}</strong>
                 <div>
                   <Link href={`/trener/${b.trainer_id}`}>{b.trainers?.profiles?.full_name || 'Trener'}</Link>
-                  <span className="muted"> · {b.slots.gyms?.name}</span>
+                  <span className="muted"> · {placeOf(b)}</span>
                 </div>
+                {b.status === 'pending' && (
+                  <p className="small">
+                    <span className="pill pill-warn">Čeka potvrdu trenera</span>{' '}
+                    <span className="muted">odgovor najkasnije {formatDateTime(b.expires_at)}</span>
+                  </p>
+                )}
                 {b.note && <p className="small muted">„{b.note}”</p>}
               </div>
-              <button className="btn btn-danger btn-small" onClick={() => cancel(b.id)}>
-                Otkaži
+              <button className="btn btn-danger btn-small" onClick={() => cancel(b.id, b.status === 'pending')}>
+                {b.status === 'pending' ? 'Povuci zahtev' : 'Otkaži'}
               </button>
             </li>
           ))}
@@ -92,7 +106,7 @@ export default function MyBookingsPage() {
                     <strong>{b.slots ? formatDateTime(b.slots.starts_at) : ''}</strong>
                     <div>
                       <Link href={`/trener/${b.trainer_id}`}>{b.trainers?.profiles?.full_name || 'Trener'}</Link>
-                      <span className="muted"> · {b.slots?.gyms?.name}</span>
+                      <span className="muted"> · {placeOf(b)}</span>
                     </div>
                   </div>
                   <span className={`pill ${b.status === 'confirmed' ? '' : 'pill-muted'}`}>

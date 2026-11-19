@@ -273,7 +273,7 @@ export default function TrainerProfilePage() {
       </div>
 
       {picked && (
-        <BookingDialog slot={picked} trainerName={name} onClose={() => setPicked(null)} onBooked={() => loadSlots()} />
+        <BookingDialog slot={picked} gyms={gyms} trainerName={name} onClose={() => setPicked(null)} onBooked={() => loadSlots()} />
       )}
 
       {lightbox && (
@@ -285,34 +285,50 @@ export default function TrainerProfilePage() {
   );
 }
 
-function BookingDialog({ slot, trainerName, onClose, onBooked }) {
+function BookingDialog({ slot, gyms, trainerName, onClose, onBooked }) {
   const [note, setNote] = useState('');
+  const [gymId, setGymId] = useState(slot.gym_id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
+  const [result, setResult] = useState(null); // { status: 'confirmed' | 'pending' }
+
+  const isRequest = gymId !== slot.gym_id;
+  const gymName = (id) => gyms.find((g) => g.id === id)?.name || slot.gyms?.name;
+  // zahtev za drugu teretanu mora najkasnije 2h (+15 min) pre treninga
+  const requestTooLate = new Date(slot.starts_at).getTime() - Date.now() < (2 * 60 + 15) * 60 * 1000;
 
   async function confirm() {
     setBusy(true);
     setError('');
-    const { error } = await getSupabase().rpc('book_slot', { p_slot_id: slot.id, p_note: note });
+    const { data, error } = await getSupabase().rpc('book_slot', {
+      p_slot_id: slot.id,
+      p_note: note,
+      p_gym_id: gymId,
+    });
     setBusy(false);
     if (error) setError(errorMessage(error));
-    else setDone(true);
+    else setResult(data || { status: 'confirmed' });
     onBooked();
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        {done ? (
+        {result ? (
           <>
-            <h2 className="section-title">Termin je zakazan ✓</h2>
+            <h2 className="section-title">
+              {result.status === 'pending' ? 'Zahtev je poslat ✓' : 'Termin je zakazan ✓'}
+            </h2>
             <p>
               {trainerName} · {formatDateTime(slot.starts_at)}
               <br />
-              <span className="muted">{slot.gyms?.name}</span>
+              <span className="muted">{gymName(gymId)}</span>
             </p>
-            <p className="small muted">Plaćanje je na licu mesta. Ako trener otkaže, videćeš to u „Moji termini”.</p>
+            <p className="small muted">
+              {result.status === 'pending'
+                ? 'Trener treba da potvrdi trening u ovoj teretani. Odgovor stiže najkasnije za 12 sati (ili 2 sata pre treninga) — status pratiš u „Moji termini”.'
+                : 'Plaćanje je na licu mesta. Ako trener otkaže, videćeš to u „Moji termini”.'}
+            </p>
             <div className="modal-actions">
               <Link href="/moji-termini" className="btn btn-primary">Moji termini</Link>
               <button className="btn" onClick={onClose}>Zatvori</button>
@@ -320,14 +336,51 @@ function BookingDialog({ slot, trainerName, onClose, onBooked }) {
           </>
         ) : (
           <>
-            <h2 className="section-title">Potvrdi rezervaciju</h2>
+            <h2 className="section-title">{isRequest ? 'Pošalji zahtev' : 'Potvrdi rezervaciju'}</h2>
             <p>
               <strong>{trainerName}</strong>
               <br />
               {formatDateTime(slot.starts_at)} – {formatTime(slot.ends_at)}
-              <br />
-              <span className="muted">{slot.gyms?.name}</span>
             </p>
+
+            {gyms.length > 1 ? (
+              <fieldset className="gym-choice">
+                <legend>Gde želiš trening?</legend>
+                {[...gyms]
+                  .sort((a, b) => Number(b.id === slot.gym_id) - Number(a.id === slot.gym_id))
+                  .map((g) => {
+                    const other = g.id !== slot.gym_id;
+                    const disabled = other && requestTooLate;
+                    return (
+                      <label key={g.id} className={`gym-choice-opt ${gymId === g.id ? 'on' : ''} ${disabled ? 'disabled' : ''}`}>
+                        <input
+                          type="radio"
+                          name="gym"
+                          checked={gymId === g.id}
+                          disabled={disabled}
+                          onChange={() => setGymId(g.id)}
+                        />
+                        <span>
+                          <strong>{g.name}</strong>
+                          <span className="small muted">
+                            {!other ? 'potvrđeno odmah' : disabled ? 'prekasno za zahtev (min. 2h ranije)' : 'trener potvrđuje'}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+              </fieldset>
+            ) : (
+              <p className="muted">{slot.gyms?.name}</p>
+            )}
+
+            {isRequest && (
+              <p className="alert alert-warn small">
+                Termin je predviđen u teretani {slot.gyms?.name}, pa trener mora da potvrdi da stiže u {gymName(gymId)}.
+                Termin je do odgovora rezervisan za tebe.
+              </p>
+            )}
+
             <label className="field">
               <span>Poruka treneru (nije obavezno)</span>
               <textarea
@@ -342,7 +395,7 @@ function BookingDialog({ slot, trainerName, onClose, onBooked }) {
             {error && <p className="alert alert-error">{error}</p>}
             <div className="modal-actions">
               <button className="btn btn-primary" onClick={confirm} disabled={busy}>
-                {busy ? 'Zakazujem…' : 'Zakaži'}
+                {busy ? 'Šaljem…' : isRequest ? 'Pošalji zahtev' : 'Zakaži'}
               </button>
               <button className="btn" onClick={onClose}>Odustani</button>
             </div>

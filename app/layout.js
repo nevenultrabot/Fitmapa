@@ -10,7 +10,8 @@ export const metadata = {
   title: 'FitMapa — personalni treneri u Novom Sadu',
   description: 'Pronađi teretanu na mapi, izaberi personalnog trenera i zakaži termin.',
   manifest: '/manifest.webmanifest',
-  icons: { icon: '/icon.svg' },
+  icons: { icon: '/icon.svg', apple: '/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'FitMapa', statusBarStyle: 'black-translucent' },
 };
 
 export const viewport = {

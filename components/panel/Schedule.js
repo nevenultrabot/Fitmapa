@@ -15,7 +15,7 @@ export default function Schedule({ userId, week, onAddClick }) {
     const { data, error } = await getSupabase()
       .from('slots')
       .select(
-        'id, starts_at, ends_at, status, gym_id, gyms(name), bookings(id, status, note, client:profiles!bookings_client_id_fkey(full_name, phone))'
+        'id, starts_at, ends_at, status, gym_id, gyms(name), bookings(id, status, note, expires_at, gym_id, place:gyms(name), client:profiles!bookings_client_id_fkey(full_name, phone))'
       )
       .eq('trainer_id', userId)
       .gte('starts_at', week.start)
@@ -59,6 +59,10 @@ export default function Schedule({ userId, week, onAddClick }) {
     run(key, () => getSupabase().rpc('set_day_status', { p_day: key, p_status: status }),
       status === 'blocked' ? 'Dan je blokiran — zakazani termini su ostali netaknuti.' : 'Dan je ponovo otvoren.');
 
+  const respond = (booking, accept) =>
+    run(booking.id, () => getSupabase().rpc('respond_booking', { p_booking_id: booking.id, p_accept: accept }),
+      accept ? 'Zahtev je prihvaćen — trening je potvrđen.' : 'Zahtev je odbijen, termin je ponovo slobodan.');
+
   function confirmCancel(reopen) {
     const { booking } = cancelling;
     setCancelling(null);
@@ -72,6 +76,8 @@ export default function Schedule({ userId, week, onAddClick }) {
   const future = slots.filter((s) => new Date(s.starts_at).getTime() > now);
   const booked = future.filter((s) => s.status === 'booked').length;
   const free = future.filter((s) => s.status === 'open').length;
+  const activeBooking = (s) => (s.bookings || []).find((b) => b.status === 'confirmed' || b.status === 'pending');
+  const requests = future.filter((s) => activeBooking(s)?.status === 'pending');
 
   return (
     <div>
@@ -81,11 +87,37 @@ export default function Schedule({ userId, week, onAddClick }) {
           <span className="week-banner-range">{week.range}</span>
         </div>
         <p className="small">
-          U nedelju u 22h počinje nova nedelja: ovaj raspored se briše i praviš novi. Dok ga ne napraviš, klijenti ne vide slobodne termine.
+          U nedelju u 22h počinje nova nedelja. Ako tada nemaš nijedan termin, automatski dobijaš raspored: svaki dan 8–20h,
+          termini od 75 min, u primarnoj teretani. Obriši ili blokiraj dane i sate kad ne radiš.
         </p>
       </div>
 
       {message && <p className={`alert alert-${message.type}`} onClick={() => setMessage(null)}>{message.text}</p>}
+
+      {requests.length > 0 && (
+        <div className="card requests-card">
+          <strong>
+            {requests.length === 1 ? 'Imaš 1 zahtev za trening u drugoj teretani' : `Imaš ${requests.length} zahteva za trening u drugoj teretani`}
+          </strong>
+          <ul>
+            {requests.map((s) => {
+              const b = activeBooking(s);
+              return (
+                <li key={b.id}>
+                  <span>
+                    <strong>{b.client?.full_name || 'Klijent'}</strong> · {formatDateTime(s.starts_at)} · {b.place?.name}
+                    <span className="small muted"> (ističe {formatDateTime(b.expires_at)})</span>
+                  </span>
+                  <span className="requests-actions">
+                    <button className="btn btn-small btn-primary" disabled={busyId === b.id} onClick={() => respond(b, true)}>Prihvati</button>
+                    <button className="btn btn-small btn-danger btn-outline" disabled={busyId === b.id} onClick={() => respond(b, false)}>Odbij</button>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <div className="stats">
         <div className="stat">
@@ -150,10 +182,11 @@ export default function Schedule({ userId, week, onAddClick }) {
               ) : (
                 <ul className="slot-rows">
                   {items.map((s) => {
-                    const booking = (s.bookings || []).find((b) => b.status === 'confirmed');
+                    const booking = activeBooking(s);
+                    const pending = booking?.status === 'pending';
                     const past = new Date(s.starts_at).getTime() <= now;
                     return (
-                      <li key={s.id} className={`slot-row status-${s.status} ${past ? 'past' : ''}`}>
+                      <li key={s.id} className={`slot-row status-${s.status} ${pending ? 'is-pending' : ''} ${past ? 'past' : ''}`}>
                         <div className="slot-row-time">
                           <strong>{formatTime(s.starts_at)}</strong>
                           <span className="small muted">–{formatTime(s.ends_at)}</span>
@@ -161,7 +194,10 @@ export default function Schedule({ userId, week, onAddClick }) {
                         <div className="slot-row-info">
                           {s.status === 'booked' && booking ? (
                             <>
-                              <strong>{booking.client?.full_name || 'Klijent'}</strong>
+                              <strong>
+                                {booking.client?.full_name || 'Klijent'}
+                                {pending && <span className="pill pill-warn">zahtev</span>}
+                              </strong>
                               {booking.client?.phone && (
                                 <span className="small">
                                   <a href={`tel:${booking.client.phone}`}>{booking.client.phone}</a>
@@ -178,11 +214,29 @@ export default function Schedule({ userId, week, onAddClick }) {
                               {s.status === 'open' ? 'Slobodan' : s.status === 'blocked' ? 'Blokiran (klijenti ga ne vide)' : 'Zauzet'}
                             </span>
                           )}
-                          <span className="small muted">{s.gyms?.name}</span>
+                          <span className="small muted">
+                            {booking && booking.gym_id && booking.gym_id !== s.gym_id ? (
+                              <>
+                                <b>{booking.place?.name}</b> (termin je bio u {s.gyms?.name})
+                              </>
+                            ) : (
+                              s.gyms?.name
+                            )}
+                          </span>
                         </div>
                         {!past && (
                           <div className="slot-row-actions">
-                            {s.status === 'booked' && booking && (
+                            {pending && (
+                              <>
+                                <button className="btn btn-small btn-primary" disabled={busyId === booking.id} onClick={() => respond(booking, true)}>
+                                  Prihvati
+                                </button>
+                                <button className="btn btn-small btn-danger btn-outline" disabled={busyId === booking.id} onClick={() => respond(booking, false)}>
+                                  Odbij
+                                </button>
+                              </>
+                            )}
+                            {s.status === 'booked' && booking && !pending && (
                               <button
                                 className="btn btn-small btn-danger"
                                 disabled={busyId === booking.id}

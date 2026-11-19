@@ -9,6 +9,7 @@ import { useWeek } from '@/lib/useWeek';
 import Schedule from '@/components/panel/Schedule';
 import AddSlots from '@/components/panel/AddSlots';
 import ProfileEditor from '@/components/panel/ProfileEditor';
+import PushCard from '@/components/panel/PushCard';
 
 const TABS = [
   { id: 'schedule', label: 'Raspored' },
@@ -29,11 +30,16 @@ export default function TrainerPanelPage() {
     if (!user) return;
     const { data } = await getSupabase()
       .from('trainers')
-      .select('*, trainer_gyms(gyms(id, name, address, lat, lng, image_url, opening_hours, membership, created_by))')
+      .select('*, trainer_gyms(is_primary, gyms(id, name, address, lat, lng, image_url, opening_hours, membership, created_by))')
       .eq('id', user.id)
       .maybeSingle();
     setTrainer(data);
-    setMyGyms((data?.trainer_gyms || []).map((tg) => tg.gyms).filter(Boolean));
+    setMyGyms(
+      (data?.trainer_gyms || [])
+        .filter((tg) => tg.gyms)
+        .map((tg) => ({ ...tg.gyms, is_primary: tg.is_primary }))
+        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+    );
   }, [user]);
 
   useEffect(() => {
@@ -95,6 +101,8 @@ export default function TrainerPanelPage() {
           </ul>
         </div>
       )}
+
+      <PushCard />
 
       <div className="tabs tabs-wide">
         {TABS.map((t) => (

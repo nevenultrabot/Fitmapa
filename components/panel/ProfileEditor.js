@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { FaStar, FaRegStar } from 'react-icons/fa';
 import Avatar from '@/components/Avatar';
 import GymForm from '@/components/GymForm';
 import { getSupabase, errorMessage } from '@/lib/supabase';
@@ -269,7 +270,10 @@ function GymPicker({ userId, myGyms, onChanged }) {
 
   async function add(gymId) {
     setError('');
-    const { error } = await getSupabase().from('trainer_gyms').insert({ trainer_id: userId, gym_id: gymId });
+    // prva teretana je automatski primarna
+    const { error } = await getSupabase()
+      .from('trainer_gyms')
+      .insert({ trainer_id: userId, gym_id: gymId, is_primary: myGyms.length === 0 });
     if (error) setError(errorMessage(error));
     setQuery('');
     onChanged();
@@ -282,19 +286,43 @@ function GymPicker({ userId, myGyms, onChanged }) {
     onChanged();
   }
 
+  async function makePrimary(gymId) {
+    setError('');
+    const { error } = await getSupabase().rpc('set_primary_gym', { p_gym_id: gymId });
+    if (error) setError(errorMessage(error));
+    onChanged();
+  }
+
   const canEdit = (g) => g.created_by === userId || !g.created_by;
+  const noPrimary = myGyms.length > 1 && !myGyms.some((g) => g.is_primary);
 
   return (
     <section className="card">
       <h2 className="section-title">Teretane u kojima radim</h2>
-      <p className="small muted">Klijenti te pronalaze preko ovih teretana na mapi.</p>
+      <p className="small muted">
+        Klijenti te pronalaze preko ovih teretana na mapi. Zvezdicom označi <strong>primarnu</strong>: tamo ti se prave
+        automatski termini, a treninge u ostalim teretanama klijenti šalju kao zahtev koji ti potvrđuješ.
+      </p>
+      {noPrimary && <p className="alert alert-warn">Označi zvezdicom svoju primarnu teretanu.</p>}
 
       {myGyms.length > 0 ? (
         <ul className="my-gyms">
           {myGyms.map((g) => (
-            <li key={g.id}>
+            <li key={g.id} className={g.is_primary ? 'is-primary' : ''}>
+              <button
+                type="button"
+                className={`gym-star ${g.is_primary ? 'on' : ''}`}
+                onClick={() => !g.is_primary && makePrimary(g.id)}
+                aria-label={g.is_primary ? `${g.name} je primarna teretana` : `Označi ${g.name} kao primarnu`}
+                title={g.is_primary ? 'Primarna teretana' : 'Označi kao primarnu'}
+              >
+                {g.is_primary ? <FaStar aria-hidden="true" /> : <FaRegStar aria-hidden="true" />}
+              </button>
               <span className="my-gyms-text">
-                <strong>{g.name}</strong>
+                <strong>
+                  {g.name}
+                  {g.is_primary && <span className="pill pill-primary">primarna</span>}
+                </strong>
                 {g.address && <span className="small muted">{g.address}</span>}
               </span>
               {canEdit(g) && (
