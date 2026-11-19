@@ -1541,3 +1541,4 @@ body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transf
 .user-menu-btn .avatar { width: 36px; height: 36px; font-size: 0.82rem; }
 .user-menu-dot { left: auto; right: 0; top: 0; }
 .nav-account:empty { display: none; }
+.cal-head .cal-edit { margin-left: auto; }

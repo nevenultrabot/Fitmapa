@@ -187,8 +187,14 @@ export default function TrainerProfilePage() {
           {/* KALENDAR */}
           <section className="card">
             <div className="cal-head">
-              <h2 className="section-title">Zakaži termin</h2>
+              {/* trener na svom profilu vidi raspored kao klijenti, ali bez zakazivanja */}
+              <h2 className="section-title">{isOwn ? 'Moj raspored' : 'Zakaži termin'}</h2>
               {week && <span className="small muted">Ova nedelja · {week.range}</span>}
+              {isOwn && (
+                <Link href="/panel" className="btn btn-small cal-edit">
+                  Uredi raspored →
+                </Link>
+              )}
             </div>
 
             {gyms.length > 1 && (
@@ -259,7 +265,11 @@ export default function TrainerProfilePage() {
                     )}
                   </div>
                 )}
-                <p className="small muted">Plaćanje je na licu mesta, po dogovoru sa trenerom.</p>
+                <p className="small muted">
+                  {isOwn
+                    ? 'Ovako klijenti vide tvoje termine. Menjaš ih u panelu.'
+                    : 'Plaćanje je na licu mesta, po dogovoru sa trenerom.'}
+                </p>
               </>
             )}
           </section>
