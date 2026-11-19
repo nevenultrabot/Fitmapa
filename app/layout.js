@@ -3,6 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import Header from '@/components/Header';
 import ChatLauncher from '@/components/ChatLauncher';
+import Cursor from '@/components/Cursor';
 
 const manrope = Manrope({ subsets: ['latin', 'latin-ext'], display: 'swap' });
 
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
         <Header />
         <main className="main">{children}</main>
         <ChatLauncher />
+        <Cursor />
       </body>
     </html>
   );
