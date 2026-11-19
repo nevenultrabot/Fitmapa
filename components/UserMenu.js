@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  FiCalendar, FiPlusCircle, FiUsers, FiUser, FiBookmark, FiLogOut, FiChevronDown,
+  FiCalendar, FiPlusCircle, FiUsers, FiUser, FiBookmark, FiLogOut,
 } from 'react-icons/fi';
 import Avatar from './Avatar';
 import { getSupabase } from '@/lib/supabase';
@@ -61,7 +61,10 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
       <button
         type="button"
         className="user-menu-btn"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => !o);
+          onNavigate?.(); // na telefonu zatvori ☰ meni
+        }}
         onDoubleClick={() => {
           setOpen(false);
           onNavigate?.();
@@ -74,8 +77,6 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
       >
         <Avatar url={avatar} name={name} size="sm" />
         {requests > 0 && <span className="user-menu-dot" aria-hidden="true" />}
-        <span className="user-menu-name">{name}</span>
-        <FiChevronDown className="user-menu-chev" aria-hidden="true" />
       </button>
 
       <div className="user-menu-list" role="menu">

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { FiEdit3, FiClock } from 'react-icons/fi';
 import Avatar from '@/components/Avatar';
 import { getSupabase, errorMessage } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
@@ -125,6 +126,16 @@ export default function TrainerProfilePage() {
               </div>
             )}
             <ContactButtons trainer={trainer} />
+            {isOwn && (
+              <div className="owner-actions">
+                <Link href="/panel?tab=profile" className="btn btn-small btn-primary">
+                  <FiEdit3 aria-hidden="true" /> Uredi profil
+                </Link>
+                <Link href="/istorija" className="btn btn-small">
+                  <FiClock aria-hidden="true" /> Istorija treninga
+                </Link>
+              </div>
+            )}
             {!isOwn && profile?.role !== 'trainer' && (
               <AddTrainerButton
                 trainerId={id}

@@ -1480,3 +1480,64 @@ body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transf
 .hero2-stats { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; }
 .hero2-stats > .hero2-stat-btn { display: flex; flex-direction: column; align-items: center; padding: 12px 6px; text-align: center; border-left: 1px solid var(--line); }
 .tabs-wide { max-width: 640px; }
+
+/* =====================================================================
+   Meni naloga (avatar gore desno)
+   ===================================================================== */
+.user-menu { position: relative; }
+.user-menu-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 10px 4px 4px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06); color: #fff; font: inherit; font-weight: 700; font-size: 0.9rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.user-menu-btn:hover, .user-menu.open .user-menu-btn { background: rgba(255, 255, 255, 0.12); border-color: var(--accent); }
+.user-menu-btn .avatar { width: 32px; height: 32px; font-size: 0.78rem; box-shadow: 0 0 0 2px var(--accent); }
+.user-menu-btn .avatar-empty { background: var(--accent); color: var(--ink); }
+.user-menu-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu-chev { transition: transform 0.2s; opacity: 0.8; }
+.user-menu.open .user-menu-chev { transform: rotate(180deg); }
+.user-menu-dot { position: absolute; left: 28px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px var(--ink); }
+
+.user-menu-list {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 80; width: 260px;
+  padding: 6px; border-radius: 14px; background: #fff; color: var(--ink);
+  box-shadow: 0 18px 40px rgba(20, 22, 26, 0.22), 0 0 0 1px rgba(20, 22, 26, 0.06);
+  opacity: 0; transform: translateY(-6px) scale(0.98); transform-origin: top right; pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.user-menu.open .user-menu-list { opacity: 1; transform: none; pointer-events: auto; }
+.user-menu-head { display: flex; flex-direction: column; padding: 10px 12px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.user-menu-head span { font-size: 0.78rem; color: var(--muted); }
+.user-menu-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 12px; border-radius: 10px; border: 0; background: none;
+  color: var(--ink); text-decoration: none; font: inherit; font-weight: 600; font-size: 0.93rem; text-align: left;
+}
+.user-menu-item > svg { flex: none; font-size: 1.05rem; color: var(--muted); }
+.user-menu-item > span:not(.tab-badge) { flex: 1; display: flex; flex-direction: column; }
+.user-menu-item small { font-weight: 500; font-size: 0.74rem; color: var(--muted); }
+.user-menu-item:hover { background: #f4f6ea; }
+.user-menu-item:hover > svg { color: var(--ink); }
+.user-menu-logout { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; }
+.user-menu-logout:hover { background: #fdf0ee; color: var(--danger); }
+.user-menu-logout:hover > svg { color: var(--danger); }
+
+/* telefon: avatar stoji u zaglavlju pored ☰, meni se otvara ispod njega */
+@media (max-width: 720px) {
+  .user-menu { margin-left: auto; }
+  .user-menu + .nav-toggle { margin-left: 4px; }
+  .user-menu-list { position: fixed; top: calc(var(--header) + 6px); right: 12px; width: min(280px, calc(100vw - 24px)); }
+  .user-menu-item { padding: 12px; }
+}
+@media (max-width: 720px) { .nav { max-height: calc(100dvh - var(--header)); overflow-y: auto; } }
+
+/* Moj profil */
+.owner-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.owner-actions .btn { display: inline-flex; align-items: center; gap: 7px; }
+.profile-edit-form { margin-top: 16px; display: flex; flex-direction: column; gap: 4px; }
+/* samo avatar, bez imena */
+.user-menu-btn { padding: 3px; gap: 0; border-radius: 50%; }
+.user-menu-btn .avatar { width: 36px; height: 36px; font-size: 0.82rem; }
+.user-menu-dot { left: auto; right: 0; top: 0; }
+.nav-account:empty { display: none; }

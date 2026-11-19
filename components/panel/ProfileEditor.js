@@ -153,26 +153,30 @@ export default function ProfileEditor({ userId, profile, trainer, myGyms, onSave
           />
           <span className="small muted">{form.bio.length}/300 · prikazuje se odmah ispod tvog imena</span>
         </label>
+        <p className="small muted optional-note">
+          Polja ispod su <strong>opciona</strong> — popuni samo ono što želiš da klijenti vide. Prazna polja se na tvom
+          profilu ne prikazuju.
+        </p>
         <label className="field">
-          <span>Specijalnosti (odvoji zarezom)</span>
+          <span>Specijalnosti (odvoji zarezom) <span className="field-opt">nije obavezno</span></span>
           <input className="input" value={form.specialties} onChange={set('specialties')} placeholder="Snaga, Mršavljenje, Rehabilitacija" />
         </label>
         <div className="row">
           <label className="field">
-            <span>Godine iskustva</span>
+            <span>Godine iskustva <span className="field-opt">nije obavezno</span></span>
             <input className="input" type="number" min="0" max="70" value={form.years_experience} onChange={set('years_experience')} />
           </label>
           <label className="field">
-            <span>Cena po treningu (RSD)</span>
+            <span>Cena po treningu (RSD) <span className="field-opt">nije obavezno</span></span>
             <input className="input" type="number" min="0" step="100" value={form.price_per_session} onChange={set('price_per_session')} />
           </label>
         </div>
         <label className="field">
-          <span>Paketi i napomena o ceni</span>
+          <span>Paketi i napomena o ceni <span className="field-opt">nije obavezno</span></span>
           <textarea className="input" rows={2} value={form.price_note} onChange={set('price_note')} placeholder="Npr. paket 12 treninga — 30.000 RSD" />
         </label>
         <label className="field">
-          <span>Sertifikati</span>
+          <span>Sertifikati <span className="field-opt">nije obavezno</span></span>
           <textarea className="input" rows={2} value={form.certificates} onChange={set('certificates')} placeholder="Jedan po redu" />
         </label>
 

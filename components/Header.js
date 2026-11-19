@@ -50,11 +50,13 @@ export default function Header() {
             <Link href="/prijava" className="btn btn-small btn-accent">
               Prijava
             </Link>
-          ) : (
-            <UserMenu user={user} profile={profile} onLogout={logout} onNavigate={() => setOpen(false)} />
-          )}
+          ) : null}
         </div>
       </nav>
+
+      {!loading && user && (
+        <UserMenu user={user} profile={profile} onLogout={logout} onNavigate={() => setOpen(false)} />
+      )}
 
       <button className="nav-toggle" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Zatvori meni' : 'Otvori meni'}>
         {open ? <FiX size={24} /> : <FiMenu size={24} />}

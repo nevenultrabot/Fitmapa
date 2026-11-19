@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
 import { useWeek } from '@/lib/useWeek';
@@ -20,10 +20,27 @@ const TABS = [
 ];
 
 export default function TrainerPanelPage() {
+  return (
+    <Suspense fallback={<div className="page"><p className="muted">Učitavam…</p></div>}>
+      <TrainerPanel />
+    </Suspense>
+  );
+}
+
+const TAB_IDS = ['schedule', 'add', 'clients', 'profile'];
+
+function TrainerPanel() {
   const router = useRouter();
+  const params = useSearchParams();
   const { loading, user, profile } = useSession();
   const week = useWeek();
-  const [tab, setTab] = useState('schedule');
+  // kartica se čita iz adrese (/panel?tab=add), da meni gore desno može da otvori tačnu karticu
+  const urlTab = params.get('tab');
+  const tab = TAB_IDS.includes(urlTab) ? urlTab : 'schedule';
+  const setTab = useCallback(
+    (id) => router.replace(id === 'schedule' ? '/panel' : `/panel?tab=${id}`, { scroll: false }),
+    [router]
+  );
   const [presetDay, setPresetDay] = useState(null);
   const [trainer, setTrainer] = useState(null);
   const [myGyms, setMyGyms] = useState([]);
@@ -60,8 +77,8 @@ export default function TrainerPanelPage() {
 
   // Novi trener: prvo ga pošalji na profil
   useEffect(() => {
-    if (trainer && myGyms.length === 0) setTab('profile');
-  }, [trainer, myGyms.length]);
+    if (trainer && myGyms.length === 0 && tab !== 'profile') setTab('profile');
+  }, [trainer, myGyms.length, tab, setTab]);
 
   if (loading || (user && !trainer && profile?.role === 'trainer')) {
     return <div className="page"><p className="muted">Učitavam…</p></div>;
