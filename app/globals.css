@@ -1563,3 +1563,5 @@ body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transf
   .admin-actions .btn { flex: 1; }
 }
 @media (max-width: 560px) { .admin-page .tabs { overflow-x: auto; } .admin-page .tab { flex: none; } }
+.admin-add-gym { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; }
+.gym-missing { margin: 10px 0 0; }

@@ -378,11 +378,17 @@ function GymPicker({ userId, myGyms, isAdmin, onChanged }) {
       </div>
       {error && <p className="alert alert-error">{error}</p>}
 
-      {editing === null && (
-        <button className="link-btn" onClick={() => setEditing('new')}>
-          Moje teretane nema na listi — dodaj je
-        </button>
-      )}
+      {/* nove teretane dodaje samo administrator */}
+      {editing === null &&
+        (isAdmin ? (
+          <button className="link-btn" onClick={() => setEditing('new')}>
+            + Dodaj novu teretanu
+          </button>
+        ) : (
+          <p className="small muted gym-missing">
+            Tvoje teretane nema na listi? Pošalji nam njen naziv i adresu preko chata dole desno — dodaćemo je.
+          </p>
+        ))}
       {editing !== null && (
         <GymForm
           userId={userId}

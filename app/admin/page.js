@@ -14,20 +14,15 @@ export default function AdminPage() {
   const router = useRouter();
   const { loading, user, profile } = useSession();
   const [trainers, setTrainers] = useState(null);
-  const [gyms, setGyms] = useState([]);
   const [filter, setFilter] = useState('pending');
   const [busy, setBusy] = useState(null);
   const [message, setMessage] = useState(null);
 
   const load = useCallback(async () => {
     const supabase = getSupabase();
-    const [t, g] = await Promise.all([
-      supabase.rpc('admin_trainers'),
-      supabase.from('gyms').select('id, name, address, image_url, created_by, created_at').eq('is_approved', false).order('created_at'),
-    ]);
+    const t = await supabase.rpc('admin_trainers');
     if (t.error) setMessage({ type: 'error', text: errorMessage(t.error) });
     setTrainers(t.data || []);
-    setGyms(g.data || []);
   }, []);
 
   useEffect(() => {
@@ -48,10 +43,6 @@ export default function AdminPage() {
     run(t.id, () => getSupabase().rpc('approve_trainer', { p_trainer_id: t.id, p_approve: yes }),
       yes ? `${t.full_name || 'Trener'} je odobren i sada je vidljiv klijentima.` : `${t.full_name || 'Trener'} više nije vidljiv klijentima.`);
 
-  const approveGym = (g, yes) =>
-    run(g.id, () => getSupabase().rpc('approve_gym', { p_gym_id: g.id, p_approve: yes }),
-      yes ? `Teretana „${g.name}” je odobrena.` : `Teretana „${g.name}” je sklonjena sa mape.`);
-
   if (loading || !user || !profile) return <div className="page"><p className="muted">Učitavam…</p></div>;
   if (!profile.is_admin) {
     return (
@@ -67,13 +58,12 @@ export default function AdminPage() {
   const drafts = trainers.filter((t) => !t.is_approved && !t.is_published);
   const approved = trainers.filter((t) => t.is_approved);
   const shown = filter === 'pending' ? pending : filter === 'drafts' ? drafts : approved;
-  const creatorName = (id) => trainers.find((t) => t.id === id)?.full_name;
 
   return (
     <div className="page admin-page">
       <h1>Administracija</h1>
       <p className="small muted">
-        Novi treneri i teretane koje dodaju treneri vidljivi su klijentima tek kad ih odobriš.
+        Novi treneri su vidljivi klijentima tek kad ih odobriš.
       </p>
       {message && <p className={`alert alert-${message.type}`} onClick={() => setMessage(null)}>{message.text}</p>}
 
@@ -135,34 +125,11 @@ export default function AdminPage() {
         </ul>
       )}
 
-      <h2 className="section-title admin-gyms-title">
-        Nove teretane {gyms.length > 0 && <span className="tab-badge">{gyms.length}</span>}
-      </h2>
-      {gyms.length === 0 ? (
-        <p className="small muted">Nema novih teretana za odobrenje. (Kad odobriš trenera, odobravaju se i teretane koje je on dodao.)</p>
-      ) : (
-        <ul className="admin-list">
-          {gyms.map((g) => (
-            <li key={g.id} className="card admin-trainer">
-              {g.image_url ? <img src={g.image_url} alt="" className="admin-gym-img" /> : <span className="admin-gym-img" />}
-              <div className="admin-trainer-info">
-                <strong>{g.name}</strong>
-                <span className="small muted">
-                  {g.address || 'bez adrese'} · dodao {creatorName(g.created_by) || 'trener'}
-                </span>
-              </div>
-              <div className="admin-actions">
-                <Link href={`/teretane/${g.id}`} className="btn btn-small" target="_blank">
-                  <FiExternalLink aria-hidden="true" /> Pogledaj
-                </Link>
-                <button className="btn btn-small btn-primary" disabled={busy === g.id} onClick={() => approveGym(g, true)}>
-                  <FiCheck aria-hidden="true" /> Odobri
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <h2 className="section-title admin-gyms-title">Teretane</h2>
+      <p className="small muted">
+        Teretane dodaješ samo ti: <Link href="/teretane">Teretane → „Dodaj teretanu”</Link>. Izmene radiš na stranici svake
+        teretane, dugmetom „Uredi teretanu”.
+      </p>
     </div>
   );
 }

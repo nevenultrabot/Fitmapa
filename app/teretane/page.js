@@ -2,14 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FiClock, FiCreditCard, FiMapPin, FiSearch } from 'react-icons/fi';
+import { FiClock, FiCreditCard, FiMapPin, FiPlus, FiSearch } from 'react-icons/fi';
 import GymCover from '@/components/GymCover';
+import GymForm from '@/components/GymForm';
+import { useSession } from '@/lib/useSession';
 import { getSupabase } from '@/lib/supabase';
 import { GYM_FIELDS } from '@/lib/data';
 
 export default function GymsPage() {
   const [gyms, setGyms] = useState(null);
   const [query, setQuery] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [reload, setReload] = useState(0);
+  const { user, profile } = useSession();
+  const isAdmin = Boolean(profile?.is_admin);
 
   useEffect(() => {
     getSupabase()
@@ -21,7 +27,7 @@ export default function GymsPage() {
           (data || []).map((g) => ({ ...g, trainerCount: (g.trainer_gyms || []).filter((tg) => tg.trainers).length }))
         )
       );
-  }, []);
+  }, [reload]);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -33,7 +39,27 @@ export default function GymsPage() {
       <div className="page-head">
         <h1>Teretane u Novom Sadu</h1>
         <p className="muted">Radno vreme, članarine i personalni treneri na jednom mestu.</p>
+        {isAdmin && !adding && (
+          <button className="btn btn-primary btn-small admin-add-gym" onClick={() => setAdding(true)}>
+            <FiPlus aria-hidden="true" /> Dodaj teretanu
+          </button>
+        )}
       </div>
+
+      {isAdmin && adding && (
+        <section className="card">
+          <GymForm
+            userId={user.id}
+            gym={null}
+            linkTrainer={false}
+            onCancel={() => setAdding(false)}
+            onSaved={() => {
+              setAdding(false);
+              setReload((r) => r + 1);
+            }}
+          />
+        </section>
+      )}
 
       <label className="search-box">
         <FiSearch aria-hidden="true" />
