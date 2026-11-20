@@ -78,7 +78,11 @@ export default function GymForm({ userId, gym, onCancel, onSaved, linkTrainer = 
     }
     setBusy(false);
     if (err) setError(errorMessage(err));
-    else onSaved(saved);
+    else {
+      if (!gym && saved && saved.is_approved === false)
+        window.alert('Teretana je dodata. Biće vidljiva na mapi čim je administrator odobri.');
+      onSaved(saved);
+    }
   }
 
   return (

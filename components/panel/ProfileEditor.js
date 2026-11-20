@@ -210,7 +210,12 @@ export default function ProfileEditor({ userId, profile, trainer, myGyms, onSave
           <input type="checkbox" checked={form.is_published} onChange={set('is_published')} />
           <span>
             <strong>Profil je javan</strong>
-            <span className="small muted"> — klijenti te vide na mapi i mogu da zakazuju</span>
+            <span className="small muted">
+              {' '}— klijenti te vide na mapi i mogu da zakazuju.{' '}
+              {trainer.is_approved
+                ? ''
+                : 'Novi profil prvo pregleda administrator; postaje vidljiv čim ga odobri.'}
+            </span>
           </span>
         </label>
         {form.is_published && myGyms.length === 0 && (
@@ -327,6 +332,7 @@ function GymPicker({ userId, myGyms, isAdmin, onChanged }) {
                 <strong>
                   {g.name}
                   {g.is_primary && <span className="pill pill-primary">primarna</span>}
+                  {g.is_approved === false && <span className="pill pill-warn">čeka odobrenje</span>}
                 </strong>
                 {g.address && <span className="small muted">{g.address}</span>}
               </span>

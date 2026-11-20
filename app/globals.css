@@ -1542,3 +1542,24 @@ body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transf
 .user-menu-dot { left: auto; right: 0; top: 0; }
 .nav-account:empty { display: none; }
 .cal-head .cal-edit { margin-left: auto; }
+
+/* Administracija + čekanje odobrenja */
+.approval-wait { color: #6b4a0b; font-weight: 600; }
+.admin-page h1 { margin-bottom: 4px; }
+.admin-page .tabs { margin: 16px 0; }
+.admin-list { list-style: none; padding: 0; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; }
+.admin-trainer { display: flex; align-items: flex-start; gap: 14px; }
+.admin-trainer-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.admin-contact { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.admin-contact a { display: inline-flex; align-items: center; gap: 5px; }
+.admin-bio { margin: 4px 0 0; color: #3d4148; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.admin-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.admin-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.admin-gym-img { flex: none; width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #ececE6; }
+.admin-gyms-title { margin-top: 26px; }
+@media (max-width: 560px) {
+  .admin-trainer { flex-wrap: wrap; }
+  .admin-actions { flex-direction: row; width: 100%; }
+  .admin-actions .btn { flex: 1; }
+}
+@media (max-width: 560px) { .admin-page .tabs { overflow-x: auto; } .admin-page .tab { flex: none; } }

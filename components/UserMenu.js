@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  FiCalendar, FiPlusCircle, FiUsers, FiUser, FiBookmark, FiLogOut,
+  FiCalendar, FiPlusCircle, FiUsers, FiUser, FiBookmark, FiLogOut, FiShield,
 } from 'react-icons/fi';
 import Avatar from './Avatar';
 import { getSupabase } from '@/lib/supabase';
@@ -14,6 +14,7 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
   const [open, setOpen] = useState(false);
   const [avatar, setAvatar] = useState(null);
   const [requests, setRequests] = useState(0);
+  const [pending, setPending] = useState(0); // za administratora: treneri/teretane koji čekaju odobrenje
   const ref = useRef(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -27,6 +28,13 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
     supabase.from('trainers').select('avatar_url').eq('id', user.id).maybeSingle().then(({ data }) => setAvatar(data?.avatar_url || null));
     supabase.rpc('my_client_requests').then(({ data }) => setRequests((data || []).length));
   }, [isTrainer, user.id, pathname]);
+
+  useEffect(() => {
+    if (!profile?.is_admin) return;
+    getSupabase()
+      .rpc('admin_pending_count')
+      .then(({ data }) => setPending(data || 0));
+  }, [profile?.is_admin, pathname]);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -55,6 +63,7 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
         { href: profileHref, label: 'Moj profil', icon: FiUser, hint: 'izmene i istorija treninga' },
         { href: '/moji-termini', label: 'Moji termini', icon: FiBookmark },
       ];
+  if (profile?.is_admin) items.push({ href: '/admin', label: 'Administracija', icon: FiShield, hint: 'odobravanje trenera', badge: pending });
 
   return (
     <div className={`user-menu ${open ? 'open' : ''}`} ref={ref}>
@@ -76,7 +85,7 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
         aria-label="Moj nalog"
       >
         <Avatar url={avatar} name={name} size="sm" />
-        {requests > 0 && <span className="user-menu-dot" aria-hidden="true" />}
+        {requests + pending > 0 && <span className="user-menu-dot" aria-hidden="true" />}
       </button>
 
       <div className="user-menu-list" role="menu">

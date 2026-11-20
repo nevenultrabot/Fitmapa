@@ -106,6 +106,11 @@ export default function TrainerProfilePage() {
     <div className="page profile-page">
       <Link href="/mapa" className="link-back">← Mapa</Link>
 
+      {isOwn && trainer.is_published && !trainer.is_approved && (
+        <p className="alert alert-warn">
+          Tvoj profil čeka odobrenje administratora. Do tada ga vidiš samo ti — klijenti ga ne vide.
+        </p>
+      )}
       {isOwn && !trainer.is_published && (
         <p className="alert alert-warn">
           Tvoj profil još nije javan. Uključi „Profil je javan” u <Link href="/panel">panelu</Link>.

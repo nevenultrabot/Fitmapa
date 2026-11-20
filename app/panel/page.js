@@ -50,7 +50,7 @@ function TrainerPanel() {
     if (!user) return;
     const { data } = await getSupabase()
       .from('trainers')
-      .select('*, trainer_gyms(is_primary, gyms(id, name, address, lat, lng, image_url, opening_hours, membership, created_by))')
+      .select('*, trainer_gyms(is_primary, gyms(id, name, address, lat, lng, image_url, opening_hours, membership, created_by, is_approved))')
       .eq('id', user.id)
       .maybeSingle();
     setTrainer(data);
@@ -97,6 +97,7 @@ function TrainerPanel() {
     { ok: myGyms.length > 0, text: 'Izaberi teretanu u kojoj radiš' },
     { ok: Boolean(trainer.bio), text: 'Napiši nešto o sebi' },
     { ok: trainer.is_published, text: 'Uključi „Profil je javan”' },
+    { ok: trainer.is_approved, text: 'Sačekaj da administrator odobri profil' },
   ];
   const incomplete = checklist.some((c) => !c.ok);
 
@@ -106,7 +107,12 @@ function TrainerPanel() {
         <div>
           <h1>{profile.full_name || 'Moj profil'}</h1>
           <p className="muted small">
-            {trainer.is_published ? (
+            {trainer.is_published && !trainer.is_approved ? (
+              <span className="approval-wait">
+                ⏳ Profil čeka odobrenje administratora — klijenti ga još ne vide. ·{' '}
+                <Link href={`/trener/${user.id}`}>Pregledaj profil →</Link>
+              </span>
+            ) : trainer.is_published ? (
               <>
                 Profil je javan · <Link href={`/trener/${user.id}`}>Pogledaj kako ga drugi vide →</Link>
               </>
