@@ -80,7 +80,10 @@ function useHomeReveal(isHome) {
 
 export default function ChatLauncher() {
   const { loading, user, profile } = useSession();
-  const shown = useHomeReveal(usePathname() === '/');
+  const pathname = usePathname();
+  const shown = useHomeReveal(pathname === '/');
+  // na prijavi, registraciji i promeni lozinke chat ne treba
+  const hiddenRoute = pathname === '/prijava' || pathname === '/nova-lozinka';
   const [ready, setReady] = useState(false);
   const [bubble, setBubble] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -135,7 +138,18 @@ export default function ChatLauncher() {
     };
   }, [ready, shown]);
 
-  if (!PROPERTY_ID || !WIDGET_ID) return null;
+  // ako je chat bio otvoren pa se ode na prijavu, skloni ga
+  useEffect(() => {
+    if (!hiddenRoute) return;
+    try {
+      window.Tawk_API?.minimize?.();
+      window.Tawk_API?.hideWidget?.();
+    } catch {}
+    setOpen(false);
+    setBubble(false);
+  }, [hiddenRoute]);
+
+  if (!PROPERTY_ID || !WIDGET_ID || hiddenRoute) return null;
 
   function openChat() {
     const api = window.Tawk_API;

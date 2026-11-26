@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabase, errorMessage } from '@/lib/supabase';
+import { getSupabase, errorMessage, getRememberMe, setRememberMe } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,10 +19,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [next, setNext] = useState(null);
+  const [remember, setRemember] = useState(true);
 
   useEffect(() => {
     const n = new URLSearchParams(window.location.search).get('next');
     if (n && n.startsWith('/')) setNext(n);
+    setRemember(getRememberMe());
   }, []);
 
   async function goAfterLogin(userId) {
@@ -80,6 +82,7 @@ export default function LoginPage() {
     setInfo('');
     setBusy(true);
     const supabase = getSupabase();
+    setRememberMe(remember); // pre prijave: odlučuje gde se čuva sesija
     try {
       if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -239,11 +242,17 @@ export default function LoginPage() {
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </label>
-          {mode === 'login' && (
-            <button type="button" className="link-btn forgot-link" onClick={() => switchMode('forgot')}>
-              Zaboravio si lozinku?
-            </button>
-          )}
+          <div className="login-extra">
+            <label className="remember-me">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+              <span>Zapamti me na ovom uređaju</span>
+            </label>
+            {mode === 'login' && (
+              <button type="button" className="link-btn forgot-link" onClick={() => switchMode('forgot')}>
+                Zaboravio si lozinku?
+              </button>
+            )}
+          </div>
           <button className="btn btn-primary btn-block" disabled={busy}>
             {busy ? 'Sačekaj…' : mode === 'login' ? 'Prijavi se' : 'Napravi nalog'}
           </button>

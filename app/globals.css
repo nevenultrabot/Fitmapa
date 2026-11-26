@@ -1565,3 +1565,9 @@ body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transf
 @media (max-width: 560px) { .admin-page .tabs { overflow-x: auto; } .admin-page .tab { flex: none; } }
 .admin-add-gym { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; }
 .gym-missing { margin: 10px 0 0; }
+
+/* Zapamti me */
+.login-extra { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: -4px 0 4px; }
+.login-extra .forgot-link { margin-top: 0; align-self: auto; }
+.remember-me { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.remember-me input { width: 18px; height: 18px; accent-color: var(--ink); }
