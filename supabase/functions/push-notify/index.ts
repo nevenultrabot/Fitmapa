@@ -1,4 +1,4 @@
-// FitMapa — slanje push obaveštenja treneru (Supabase Edge Function "push-notify").
+// Gymby — slanje push obaveštenja treneru (Supabase Edge Function "push-notify").
 //
 // Poziva je baza (okidač na tabeli bookings) sa { event_id }. Funkcija:
 //   1. uzme taj događaj iz push_events, samo ako još nije poslat i nije stariji od 10 min
@@ -81,7 +81,7 @@ export async function encryptPayload(payload, p256dh, authSecret, fixed) {
   return concat(header, cipher);
 }
 
-// RFC 8292 (VAPID): potpis koji dokazuje push servisu da poruka stiže od FitMape
+// RFC 8292 (VAPID): potpis koji dokazuje push servisu da poruka stiže od Gymby-ja
 export async function vapidHeader(endpoint, publicKey, privateKey, subject) {
   const pub = b64uDecode(publicKey);
   const key = await crypto.subtle.importKey(
