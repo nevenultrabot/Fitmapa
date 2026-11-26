@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { FiEdit3, FiClock } from 'react-icons/fi';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { FiEdit3, FiClock, FiEye } from 'react-icons/fi';
 import Avatar from '@/components/Avatar';
 import { getSupabase, errorMessage } from '@/lib/supabase';
 import { useSession } from '@/lib/useSession';
@@ -15,6 +15,7 @@ import { dayKey, formatDateTime, formatPrice, formatTime } from '@/lib/format';
 export default function TrainerProfilePage() {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, profile } = useSession();
   const week = useWeek();
   const clients = useTrainerClients(id, user);
@@ -26,6 +27,7 @@ export default function TrainerProfilePage() {
   const [gymFilter, setGymFilter] = useState('all');
   const [picked, setPicked] = useState(null);
   const [lightbox, setLightbox] = useState(null);
+  const [previewNote, setPreviewNote] = useState(false);
 
   const loadSlots = useCallback(async () => {
     if (!week) return;
@@ -82,7 +84,10 @@ export default function TrainerProfilePage() {
   const currentKey = activeDay || firstUseful?.key;
   const currentDay = week?.days.find((d) => d.key === currentKey);
   const daySlots = byDay[currentKey] || [];
-  const isOwn = user?.id === id;
+  // ?pregled=1 — trener vidi svoj profil tačno kako ga vide drugi (bez dugmića za uređivanje)
+  const isOwner = user?.id === id;
+  const preview = isOwner && searchParams?.get('pregled') === '1';
+  const isOwn = isOwner && !preview;
 
   if (trainer === undefined) return <div className="page"><p className="muted">Učitavam…</p></div>;
   if (trainer === null)
@@ -95,6 +100,10 @@ export default function TrainerProfilePage() {
 
   const name = trainer.profiles?.full_name || 'Trener';
   function pickSlot(slot) {
+    if (preview) {
+      setPreviewNote(true);
+      return;
+    }
     if (!user) {
       router.push(`/prijava?next=/trener/${id}`);
       return;
@@ -105,6 +114,17 @@ export default function TrainerProfilePage() {
   return (
     <div className="page profile-page">
       <Link href="/mapa" className="link-back">← Mapa</Link>
+
+      {preview && (
+        <div className="preview-bar">
+          <FiEye aria-hidden="true" />
+          <span>
+            <strong>Ovako tvoj profil vide drugi.</strong>
+            <span className="small"> Dugmad za uređivanje su sakrivena.</span>
+          </span>
+          <Link href={`/trener/${id}`} className="btn btn-small">Izađi iz pregleda</Link>
+        </div>
+      )}
 
       {isOwn && trainer.is_published && !trainer.is_approved && (
         <p className="alert alert-warn">
@@ -269,6 +289,9 @@ export default function TrainerProfilePage() {
                       )
                     )}
                   </div>
+                )}
+                {preview && previewNote && (
+                  <p className="small preview-note">U pregledu ne možeš da zakažeš svoj termin — vežbač ovde bira slobodan termin.</p>
                 )}
                 <p className="small muted">
                   {isOwn

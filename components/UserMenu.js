@@ -89,10 +89,23 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
       </button>
 
       <div className="user-menu-list" role="menu">
-        <div className="user-menu-head">
-          <strong>{name}</strong>
-          <span>{isTrainer ? 'Personalni trener' : 'Vežbač'}</span>
-        </div>
+        {/* klik na glavu menija: trener → javni profil kako ga drugi vide, vežbač → njegov profil */}
+        <Link
+          href={isTrainer ? `/trener/${user.id}?pregled=1` : '/profil'}
+          className="user-menu-head"
+          role="menuitem"
+          onClick={() => {
+            setOpen(false);
+            onNavigate?.();
+          }}
+        >
+          <Avatar url={avatar} name={name} size="md" />
+          <span className="user-menu-head-text">
+            <strong>{name}</strong>
+            <span>{isTrainer ? 'Personalni trener' : 'Vežbač'}</span>
+            <small>{isTrainer ? 'Pogledaj profil kako ga drugi vide →' : 'Pogledaj svoj profil →'}</small>
+          </span>
+        </Link>
         {items.map(({ href, label, icon: Icon, hint, badge }) => (
           <Link
             key={href}

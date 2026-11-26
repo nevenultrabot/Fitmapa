@@ -1748,3 +1748,26 @@ html.is-app .footer-bottom { padding-bottom: 96px; }
   .map-explorer:has(.drawer.open) .locate-btn { bottom: calc(50% + 14px); }
   .map-explorer:has(.drawer.open) .map-notice { bottom: calc(50% + 66px); }
 }
+
+/* glava menija naloga: avatar + ime, klik vodi na profil */
+.user-menu-head {
+  flex-direction: row; align-items: center; gap: 12px; padding: 10px 12px 12px;
+  border-radius: 10px 10px 0 0; text-decoration: none; color: var(--ink); transition: background 0.15s;
+}
+.user-menu-head:hover { background: #f4f6ea; }
+.user-menu-head .avatar { width: 46px; height: 46px; box-shadow: 0 0 0 2px var(--accent); }
+.user-menu-head .avatar-empty { font-size: 0.95rem; color: var(--accent); }
+.user-menu-head-text { display: flex; flex-direction: column; min-width: 0; color: var(--ink) !important; font-size: 1rem !important; }
+.user-menu-head-text strong { font-size: 0.98rem; line-height: 1.25; }
+.user-menu-head-text small { margin-top: 2px; font-size: 0.74rem; font-weight: 700; color: #4f6b12; }
+
+/* profil trenera u režimu "kako ga drugi vide" */
+.preview-bar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 12px 14px;
+  border-radius: 14px; background: var(--ink); color: #fff;
+}
+.preview-bar > svg { flex: none; color: var(--accent); font-size: 1.2rem; }
+.preview-bar > span { flex: 1; min-width: 0; }
+.preview-bar .small { color: rgba(255, 255, 255, 0.7); }
+.preview-bar .btn { flex: none; }
+.preview-note { color: var(--warn); font-weight: 600; }
