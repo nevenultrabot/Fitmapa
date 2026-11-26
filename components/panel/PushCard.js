@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FiBell, FiBellOff, FiShare } from 'react-icons/fi';
-import { pushState, enablePush, PUSH_EVENT } from '@/lib/push';
+import { pushState, enablePush, accountHasPush, PUSH_EVENT } from '@/lib/push';
 
 // Kartica u Panelu: trener uključi obaveštenja na telefonu/računaru za nove treninge i zahteve.
 export default function PushCard() {
@@ -11,7 +11,12 @@ export default function PushCard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const check = () => pushState().then(setState).catch(() => setState('unsupported'));
+    const check = async () => {
+      const st = await pushState().catch(() => 'unsupported');
+      // uključeno na nekom drugom uređaju (npr. telefonu) → kartica ne treba; na ovom se uključuje preko zvona
+      if (st !== 'on' && (await accountHasPush().catch(() => false))) return setState('elsewhere');
+      setState(st);
+    };
     check();
     window.addEventListener(PUSH_EVENT, check);
     return () => window.removeEventListener(PUSH_EVENT, check);
@@ -35,8 +40,9 @@ export default function PushCard() {
     setBusy(false);
   }
 
-  // kad su obaveštenja uključena, kartica nestaje — status i isključivanje su na zvonu gore desno
-  if (!state || state === 'unsupported' || state === 'on') return null;
+  // kad su obaveštenja uključena (na ovom ili drugom uređaju), kartica nestaje —
+  // status, uključivanje na ovom uređaju i isključivanje su na zvonu gore desno, skroz dole
+  if (!state || state === 'unsupported' || state === 'on' || state === 'elsewhere') return null;
 
   return (
     <div className="push-card">

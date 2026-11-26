@@ -5,12 +5,18 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FiBell, FiCheck } from 'react-icons/fi';
 import { getSupabase } from '@/lib/supabase';
-import { pushState, enablePush, disablePush, PUSH_EVENT } from '@/lib/push';
+import {
+  pushState, enablePush, disablePush, accountHasPush, setAppBadge, clearShownNotifications, PUSH_EVENT,
+} from '@/lib/push';
 import { formatDayShort, formatTime } from '@/lib/format';
 
 // Zvono gore desno (samo za trenere): poslednje rezervacije, zahtevi i otkazivanja
 // + uključivanje/isključivanje push obaveštenja na ovom uređaju.
+// "Pročitano" se pamti u bazi (my_notif_state / mark_notifications_seen), pa važi za sve uređaje.
+// Ako SQL 010 još nije pokrenut, pamti se lokalno na uređaju.
 const SEEN_KEY = 'gymby-notif-seen';
+// trenerove sopstvene radnje se ne broje kao novo obaveštenje
+const OWN = ['cancelled_by_trainer', 'declined'];
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const LABEL = {
@@ -25,16 +31,19 @@ const LABEL = {
 export default function NotificationsBell({ userId }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
-  const [clientRequests, setClientRequests] = useState(0);
+  const [clientRequests, setClientRequests] = useState([]);
   const [push, setPush] = useState(null);
+  const [elsewhere, setElsewhere] = useState(false); // uključeno na nekom drugom uređaju
   const [busy, setBusy] = useState(false);
-  const [seen, setSeen] = useState(0);
+  const [error, setError] = useState('');
+  const [seen, setSeen] = useState(0); // do kada je sve pročitano (brojka)
+  const [highlight, setHighlight] = useState(0); // šta označiti kao novo dok je zvonce otvoreno
   const ref = useRef(null);
   const pathname = usePathname();
 
   const load = useCallback(async () => {
     const supabase = getSupabase();
-    const [b, r] = await Promise.all([
+    const [b, r, st] = await Promise.all([
       supabase
         .from('bookings')
         .select('id, status, created_at, cancelled_at, slots(starts_at), client:profiles!bookings_client_id_fkey(full_name)')
@@ -42,20 +51,45 @@ export default function NotificationsBell({ userId }) {
         .order('created_at', { ascending: false })
         .limit(12),
       supabase.rpc('my_client_requests'),
+      supabase.rpc('my_notif_state'),
     ]);
     setItems(b.data || []);
-    setClientRequests((r.data || []).length);
+    setClientRequests(r.data || []);
+    let at = 0;
+    const row = Array.isArray(st.data) ? st.data[0] : null;
+    if (!st.error && row) {
+      at = row.seen_at && !String(row.seen_at).includes('infinity') ? new Date(row.seen_at).getTime() : 0;
+    } else {
+      try {
+        at = Number(localStorage.getItem(SEEN_KEY) || 0);
+      } catch {}
+    }
+    setSeen((prev) => Math.max(prev, at));
+    setHighlight((prev) => Math.max(prev, at));
   }, [userId]);
 
   useEffect(() => {
-    try {
-      setSeen(Number(localStorage.getItem(SEEN_KEY) || 0));
-    } catch {}
     load();
   }, [load, pathname]);
 
+  // osveži kad se aplikacija vrati u prvi plan ili stigne push dok je otvorena
   useEffect(() => {
-    const check = () => pushState().then(setPush).catch(() => setPush('unsupported'));
+    const onVisible = () => document.visibilityState === 'visible' && load();
+    const onMsg = (e) => e.data?.type === 'gymby-push' && load();
+    document.addEventListener('visibilitychange', onVisible);
+    navigator.serviceWorker?.addEventListener('message', onMsg);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      navigator.serviceWorker?.removeEventListener('message', onMsg);
+    };
+  }, [load]);
+
+  useEffect(() => {
+    const check = async () => {
+      const st = await pushState().catch(() => 'unsupported');
+      setPush(st);
+      setElsewhere(st !== 'on' && (await accountHasPush().catch(() => false)));
+    };
     check();
     window.addEventListener(PUSH_EVENT, check);
     return () => window.removeEventListener(PUSH_EVENT, check);
@@ -76,26 +110,46 @@ export default function NotificationsBell({ userId }) {
   }, [open]);
 
   const eventTime = (b) => new Date(b.cancelled_at || b.created_at).getTime();
-  const unseen = items.filter((b) => eventTime(b) > seen).length + clientRequests;
+  const isNew = (b, since) => !OWN.includes(b.status) && eventTime(b) > since;
+  const newRequests = (since) => clientRequests.filter((c) => new Date(c.created_at).getTime() > since).length;
+  const unseen = items.filter((b) => isNew(b, seen)).length + newRequests(seen);
+
+  // isti broj i na ikonici aplikacije na telefonu
+  useEffect(() => {
+    setAppBadge(unseen);
+  }, [unseen]);
 
   function toggle() {
     const next = !open;
     setOpen(next);
     if (next) {
+      // brojka odmah nestaje; nove stavke ostaju označene dok je zvonce otvoreno
       const now = Date.now();
+      setSeen(now);
+      setAppBadge(0);
+      clearShownNotifications();
       try {
         localStorage.setItem(SEEN_KEY, String(now));
       } catch {}
-      // tačka nestaje kad se otvori, a nove stavke ostaju označene dok je otvoreno
-      setTimeout(() => setSeen(now), 4000);
+      getSupabase().rpc('mark_notifications_seen').then(() => {}, () => {});
     }
   }
 
+  // kad se zvonce zatvori (klik van, Esc, druga stranica), oznake "novo" nestaju
+  useEffect(() => {
+    if (!open) setHighlight((h) => Math.max(h, seen));
+  }, [open, seen]);
+
   async function turnOn() {
     setBusy(true);
+    setError('');
     try {
       await enablePush();
-    } catch {}
+    } catch (e) {
+      // 'dismissed' = zatvorio je prozor za dozvolu; 'denied' = prikazuje se poruka ispod
+      if (e.message !== 'dismissed' && e.message !== 'denied')
+        setError('Uključivanje nije uspelo. Proveri internet i pokušaj ponovo.');
+    }
     setPush(await pushState().catch(() => 'unsupported'));
     setBusy(false);
   }
@@ -120,21 +174,25 @@ export default function NotificationsBell({ userId }) {
           <Link href="/panel" className="small">Raspored →</Link>
         </div>
 
-        {clientRequests > 0 && (
-          <Link href="/panel?tab=clients" className="bell-item is-new">
+        {clientRequests.length > 0 && (
+          <Link href="/panel?tab=clients" className={`bell-item ${newRequests(highlight) > 0 ? 'is-new' : ''}`}>
             <span className="bell-dot" aria-hidden="true" />
             <span>
-              <strong>{clientRequests === 1 ? '1 vežbač želi da te doda' : `${clientRequests} vežbača žele da te dodaju`}</strong>
+              <strong>
+                {clientRequests.length === 1
+                  ? '1 vežbač želi da te doda'
+                  : `${clientRequests.length} vežbača žele da te dodaju`}
+              </strong>
               <small>Prihvati ili odbij u kartici Vežbači</small>
             </span>
           </Link>
         )}
 
-        {items.length === 0 && clientRequests === 0 ? (
+        {items.length === 0 && clientRequests.length === 0 ? (
           <p className="bell-empty">Još nema rezervacija.</p>
         ) : (
           items.map((b) => (
-            <Link key={b.id} href="/panel" className={`bell-item ${eventTime(b) > seen ? 'is-new' : ''} st-${b.status}`}>
+            <Link key={b.id} href="/panel" className={`bell-item ${isNew(b, highlight) ? 'is-new' : ''} st-${b.status}`}>
               <span className="bell-dot" aria-hidden="true" />
               <span>
                 <strong>
@@ -158,9 +216,14 @@ export default function NotificationsBell({ userId }) {
             </>
           ) : push === 'off' ? (
             <>
-              <span>Push obaveštenja na ovom uređaju su isključena.</span>
+              <span>
+                {elsewhere
+                  ? 'Push je uključen na drugom uređaju (npr. telefonu). Na ovom je isključen.'
+                  : 'Push obaveštenja na ovom uređaju su isključena.'}
+                {error && <span className="push-card-error"> {error}</span>}
+              </span>
               <button className="btn btn-small btn-primary" onClick={turnOn} disabled={busy}>
-                Uključi
+                {busy ? 'Uključujem…' : elsewhere ? 'Uključi i ovde' : 'Uključi'}
               </button>
             </>
           ) : push === 'ios-install' ? (

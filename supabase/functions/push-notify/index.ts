@@ -174,6 +174,12 @@ async function handle(req) {
   const subs = await rest(`push_subscriptions?user_id=eq.${booking.trainer_id}&select=id,endpoint,p256dh,auth`).then((r) => r.json());
   const message = buildMessage(ev.kind, booking);
 
+  // broj nepročitanih → telefon ga stavi na ikonicu aplikacije (SQL 010: unseen_count)
+  const badge = await rest('rpc/unseen_count', { method: 'POST', body: JSON.stringify({ p_user: booking.trainer_id }) })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+  if (typeof badge === 'number') message.badge = badge;
+
   let sent = 0;
   for (const sub of subs || []) {
     try {
