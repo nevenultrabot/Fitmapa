@@ -1647,3 +1647,70 @@ body.intro-running .chat-launcher, .chat-launcher.chat-wait { opacity: 0; transf
   .clients-history { position: static; max-height: none; }
   .client-acc-body { padding-left: 12px; }
 }
+
+/* =====================================================================
+   Footer (sve stranice osim mape)
+   ===================================================================== */
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > .main { flex: 1 0 auto; min-height: 0; }
+.footer { background: var(--ink); color: rgba(255, 255, 255, 0.72); }
+.footer-inner {
+  max-width: 1080px; margin: 0 auto; padding: 36px 16px 28px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; flex-wrap: wrap;
+}
+.footer-brand { display: flex; flex-direction: column; gap: 10px; max-width: 300px; }
+.footer-brand p { margin: 0; font-size: 0.9rem; }
+.footer-nav { display: flex; flex-wrap: wrap; gap: 6px 22px; padding-top: 4px; }
+.footer-nav a { color: #fff; text-decoration: none; font-weight: 600; font-size: 0.95rem; }
+.footer-nav a:hover { color: var(--accent); }
+.footer-social { display: flex; gap: 10px; }
+.footer-social a {
+  width: 42px; height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #fff; font-size: 1.2rem;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.footer-social a:hover { border-color: var(--accent); color: var(--accent); background: rgba(255, 255, 255, 0.1); }
+.footer-bottom {
+  max-width: 1080px; margin: 0 auto; padding: 16px 16px 22px; border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);
+}
+@media (max-width: 720px) {
+  .footer-inner { flex-direction: column; gap: 22px; padding-top: 28px; }
+  .footer-nav { gap: 10px 20px; }
+  .footer-bottom { padding-bottom: 96px; } /* da dugme za chat ne prekriva tekst */
+}
+
+/* avatar vežbača u rasporedu i istoriji treninga */
+.clients-initial.sm { width: 32px; height: 32px; font-size: 0.85rem; }
+.slot-row-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.slot-row-who > div { display: flex; flex-direction: column; min-width: 0; }
+.history-who-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.slot-row-who + .small { padding-left: 42px; }
+.bell.for-client .bell-item.st-cancelled_by_trainer strong { color: #8a2f25; }
+
+/* =====================================================================
+   Donja traka Nazad / Napred / Osveži — samo u instaliranoj aplikaciji
+   (klasu .is-app postavlja components/AppNavBar.js)
+   ===================================================================== */
+:root { --appbar: 0px; }
+html.is-app { --appbar: calc(54px + env(safe-area-inset-bottom, 0px)); }
+.appbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  height: var(--appbar); padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex; align-items: center; justify-content: space-around;
+  background: rgba(255, 255, 255, 0.94); border-top: 1px solid var(--line);
+  -webkit-backdrop-filter: saturate(180%) blur(16px); backdrop-filter: saturate(180%) blur(16px);
+}
+.appbar button {
+  flex: 1; height: 54px; display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 0; color: var(--ink); font-size: 1.6rem; -webkit-tap-highlight-color: transparent;
+}
+.appbar button:active:not(:disabled) { opacity: 0.45; }
+.appbar button:disabled { color: #c4c6c0; opacity: 1; }
+.appbar button:last-child { font-size: 1.3rem; }
+html.is-app body { padding-bottom: var(--appbar); }
+html.is-app .map-page { bottom: var(--appbar); }
+html.is-app .chat-launcher, html.is-app .onb-skip { bottom: calc(var(--appbar) + 14px); }
+html.is-app .home { --screen: calc(100dvh - var(--header) - var(--appbar)); }
+html.is-app .footer-bottom { padding-bottom: 96px; }
+@media (max-width: 720px) { html.is-app .nav { max-height: calc(100dvh - var(--header) - var(--appbar)); } }

@@ -1,9 +1,10 @@
-// Gymby — slanje push obaveštenja treneru (Supabase Edge Function "push-notify").
+// Gymby — slanje push obaveštenja (Supabase Edge Function "push-notify").
+// Treneru: novi trening, zahtev, klijent otkazao. Vežbaču: trener otkazao trening.
 //
 // Poziva je baza (okidač na tabeli bookings) sa { event_id }. Funkcija:
 //   1. uzme taj događaj iz push_events, samo ako još nije poslat i nije stariji od 10 min
 //      (zato ne treba nikakva lozinka — niko ne može da pošalje nešto što baza nije tražila),
-//   2. pročita rezervaciju i pretplate trenera,
+//   2. pročita rezervaciju i pretplate primaoca (trener, ili vežbač kad trener otkaže),
 //   3. pošalje šifrovano obaveštenje na svaki njegov uređaj (Web Push standard).
 //
 // Tajna: VAPID_PRIVATE_KEY (Edge Functions → Secrets). Javni ključ je ispod i u lib/push.js.
@@ -139,6 +140,10 @@ export function buildMessage(kind, b) {
     return { title: `Zahtev za trening: ${who}`, body: `${at} · ${place}. Potvrdi ili odbij u roku od 12h.`, url: '/panel', tag: b.id };
   if (kind === 'client_cancelled')
     return { title: `Otkazan trening: ${who}`, body: `${at} · ${place}. Termin je ponovo slobodan.`, url: '/panel', tag: b.id };
+  if (kind === 'trainer_cancelled') {
+    const trainer = b.trainer?.profiles?.full_name || 'Trener';
+    return { title: `Otkazan trening: ${trainer}`, body: `${at} · ${place}. Trener je otkazao termin.`, url: '/moji-termini', tag: b.id };
+  }
   return { title: `Novi trening: ${who}`, body: `${at} · ${place}`, url: '/panel', tag: b.id };
 }
 
@@ -167,15 +172,16 @@ async function handle(req) {
   if (!ev) return new Response('nothing to send');
 
   const [booking] = await rest(
-    `bookings?id=eq.${ev.booking_id}&select=id,trainer_id,place:gyms(name),slots(starts_at,gyms(name)),client:profiles!bookings_client_id_fkey(full_name)`
+    `bookings?id=eq.${ev.booking_id}&select=id,trainer_id,client_id,place:gyms(name),slots(starts_at,gyms(name)),client:profiles!bookings_client_id_fkey(full_name),trainer:trainers(profiles!trainers_id_fkey(full_name))`
   ).then((r) => r.json());
   if (!booking) return new Response('no booking');
 
-  const subs = await rest(`push_subscriptions?user_id=eq.${booking.trainer_id}&select=id,endpoint,p256dh,auth`).then((r) => r.json());
+  const to = ev.kind === 'trainer_cancelled' ? booking.client_id : booking.trainer_id;
+  const subs = await rest(`push_subscriptions?user_id=eq.${to}&select=id,endpoint,p256dh,auth`).then((r) => r.json());
   const message = buildMessage(ev.kind, booking);
 
   // broj nepročitanih → telefon ga stavi na ikonicu aplikacije (SQL 010: unseen_count)
-  const badge = await rest('rpc/unseen_count', { method: 'POST', body: JSON.stringify({ p_user: booking.trainer_id }) })
+  const badge = await rest('rpc/unseen_count', { method: 'POST', body: JSON.stringify({ p_user: to }) })
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);
   if (typeof badge === 'number') message.badge = badge;

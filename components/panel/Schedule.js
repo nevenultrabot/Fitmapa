@@ -193,7 +193,11 @@ export default function Schedule({ userId, week, onAddClick }) {
                         </div>
                         <div className="slot-row-info">
                           {s.status === 'booked' && booking ? (
-                            <>
+                            <div className="slot-row-who">
+                              <span className="clients-initial sm" aria-hidden="true">
+                                {(booking.client?.full_name || 'K').charAt(0).toUpperCase()}
+                              </span>
+                              <div>
                               <strong>
                                 {booking.client?.full_name || 'Klijent'}
                                 {pending && <span className="pill pill-warn">zahtev</span>}
@@ -208,7 +212,8 @@ export default function Schedule({ userId, week, onAddClick }) {
                                 </span>
                               )}
                               {booking.note && <span className="small muted">„{booking.note}”</span>}
-                            </>
+                              </div>
+                            </div>
                           ) : (
                             <span className={`status-label ${s.status}`}>
                               {s.status === 'open' ? 'Slobodan' : s.status === 'blocked' ? 'Blokiran (klijenti ga ne vide)' : 'Zauzet'}

@@ -55,7 +55,7 @@ export default function Header() {
         </div>
       </nav>
 
-      {!loading && user && profile?.role === 'trainer' && <NotificationsBell userId={user.id} />}
+      {!loading && user && profile && <NotificationsBell userId={user.id} role={profile.role} />}
       {!loading && user && (
         <UserMenu user={user} profile={profile} onLogout={logout} onNavigate={() => setOpen(false)} />
       )}

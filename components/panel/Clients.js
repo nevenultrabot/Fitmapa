@@ -210,9 +210,12 @@ export default function Clients({ userId, onCountChange }) {
                           <strong>{formatDayShort(t.start)}</strong>
                           <span className="small muted">{formatTime(t.start)}–{formatTime(t.end)}</span>
                         </span>
-                        <span className="history-who">
-                          <strong>{t.name}</strong>
-                          <span className="small muted">{t.gym}</span>
+                        <span className="history-who-row">
+                          <span className="clients-initial sm" aria-hidden="true">{t.name.charAt(0).toUpperCase()}</span>
+                          <span className="history-who">
+                            <strong>{t.name}</strong>
+                            <span className="small muted">{t.gym}</span>
+                          </span>
                         </span>
                       </li>
                     ))}

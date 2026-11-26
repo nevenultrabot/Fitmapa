@@ -10,7 +10,9 @@ import {
 } from '@/lib/push';
 import { formatDayShort, formatTime } from '@/lib/format';
 
-// Zvono gore desno (samo za trenere): poslednje rezervacije, zahtevi i otkazivanja
+// Zvono gore desno.
+//  • trener: poslednje rezervacije, zahtevi i otkazivanja
+//  • vežbač: samo treninzi koje je trener otkazao
 // + uključivanje/isključivanje push obaveštenja na ovom uređaju.
 // "Pročitano" se pamti u bazi (my_notif_state / mark_notifications_seen), pa važi za sve uređaje.
 // Ako SQL 010 još nije pokrenut, pamti se lokalno na uređaju.
@@ -28,7 +30,9 @@ const LABEL = {
   cancelled_by_trainer: 'Otkazao si',
 };
 
-export default function NotificationsBell({ userId }) {
+export default function NotificationsBell({ userId, role }) {
+  const isTrainer = role === 'trainer';
+  const home = isTrainer ? '/panel' : '/moji-termini';
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [clientRequests, setClientRequests] = useState([]);
@@ -43,14 +47,23 @@ export default function NotificationsBell({ userId }) {
 
   const load = useCallback(async () => {
     const supabase = getSupabase();
+    const bookings = isTrainer
+      ? supabase
+          .from('bookings')
+          .select('id, status, created_at, cancelled_at, slots(starts_at), client:profiles!bookings_client_id_fkey(full_name)')
+          .eq('trainer_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(12)
+      : supabase
+          .from('bookings')
+          .select('id, status, created_at, cancelled_at, slots(starts_at), trainers(profiles!trainers_id_fkey(full_name))')
+          .eq('client_id', userId)
+          .eq('status', 'cancelled_by_trainer')
+          .order('cancelled_at', { ascending: false, nullsFirst: false })
+          .limit(12);
     const [b, r, st] = await Promise.all([
-      supabase
-        .from('bookings')
-        .select('id, status, created_at, cancelled_at, slots(starts_at), client:profiles!bookings_client_id_fkey(full_name)')
-        .eq('trainer_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(12),
-      supabase.rpc('my_client_requests'),
+      bookings,
+      isTrainer ? supabase.rpc('my_client_requests') : Promise.resolve({ data: [] }),
       supabase.rpc('my_notif_state'),
     ]);
     setItems(b.data || []);
@@ -66,7 +79,7 @@ export default function NotificationsBell({ userId }) {
     }
     setSeen((prev) => Math.max(prev, at));
     setHighlight((prev) => Math.max(prev, at));
-  }, [userId]);
+  }, [userId, isTrainer]);
 
   useEffect(() => {
     load();
@@ -110,7 +123,7 @@ export default function NotificationsBell({ userId }) {
   }, [open]);
 
   const eventTime = (b) => new Date(b.cancelled_at || b.created_at).getTime();
-  const isNew = (b, since) => !OWN.includes(b.status) && eventTime(b) > since;
+  const isNew = (b, since) => (!isTrainer || !OWN.includes(b.status)) && eventTime(b) > since;
   const newRequests = (since) => clientRequests.filter((c) => new Date(c.created_at).getTime() > since).length;
   const unseen = items.filter((b) => isNew(b, seen)).length + newRequests(seen);
 
@@ -162,7 +175,7 @@ export default function NotificationsBell({ userId }) {
   }
 
   return (
-    <div className={`bell ${open ? 'open' : ''}`} ref={ref}>
+    <div className={`bell ${open ? 'open' : ''} ${isTrainer ? '' : 'for-client'}`} ref={ref}>
       <button type="button" className="bell-btn" onClick={toggle} aria-label="Obaveštenja" aria-expanded={open}>
         <FiBell aria-hidden="true" />
         {unseen > 0 && <span className="bell-count">{unseen > 9 ? '9+' : unseen}</span>}
@@ -171,7 +184,7 @@ export default function NotificationsBell({ userId }) {
       <div className="bell-list" role="dialog" aria-label="Obaveštenja">
         <div className="bell-head">
           <strong>Obaveštenja</strong>
-          <Link href="/panel" className="small">Raspored →</Link>
+          <Link href={home} className="small">{isTrainer ? 'Raspored →' : 'Moji termini →'}</Link>
         </div>
 
         {clientRequests.length > 0 && (
@@ -189,14 +202,18 @@ export default function NotificationsBell({ userId }) {
         )}
 
         {items.length === 0 && clientRequests.length === 0 ? (
-          <p className="bell-empty">Još nema rezervacija.</p>
+          <p className="bell-empty">
+            {isTrainer ? 'Još nema rezervacija.' : 'Nema novih obaveštenja. Ovde ti javljamo ako trener otkaže trening.'}
+          </p>
         ) : (
           items.map((b) => (
-            <Link key={b.id} href="/panel" className={`bell-item ${isNew(b, highlight) ? 'is-new' : ''} st-${b.status}`}>
+            <Link key={b.id} href={home} className={`bell-item ${isNew(b, highlight) ? 'is-new' : ''} st-${b.status}`}>
               <span className="bell-dot" aria-hidden="true" />
               <span>
                 <strong>
-                  {LABEL[b.status] || 'Rezervacija'}: {b.client?.full_name || 'Klijent'}
+                  {isTrainer
+                    ? `${LABEL[b.status] || 'Rezervacija'}: ${b.client?.full_name || 'Klijent'}`
+                    : `Trener je otkazao trening: ${b.trainers?.profiles?.full_name || 'Trener'}`}
                 </strong>
                 <small>{b.slots?.starts_at ? cap(`${formatDayShort(b.slots.starts_at)} u ${formatTime(b.slots.starts_at)}`) : ''}</small>
               </span>
@@ -227,7 +244,7 @@ export default function NotificationsBell({ userId }) {
               </button>
             </>
           ) : push === 'ios-install' ? (
-            <span>Na iPhone-u: Podeli → Dodaj na početni ekran, pa otvori sa ikonice i uključi u Panelu.</span>
+            <span>Na iPhone-u: Podeli → Dodaj na početni ekran, pa otvori sa ikonice i uključi ovde.</span>
           ) : push === 'denied' ? (
             <span>Obaveštenja su blokirana u pregledaču (ikonica pored adrese → Obaveštenja → Dozvoli).</span>
           ) : null}

@@ -2,6 +2,8 @@ import { Manrope } from 'next/font/google';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './globals.css';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import AppNavBar from '@/components/AppNavBar';
 import ChatLauncher from '@/components/ChatLauncher';
 import Cursor from '@/components/Cursor';
 
@@ -27,6 +29,8 @@ export default function RootLayout({ children }) {
       <body className={manrope.className}>
         <Header />
         <main className="main">{children}</main>
+        <Footer />
+        <AppNavBar />
         <ChatLauncher />
         <Cursor />
       </body>

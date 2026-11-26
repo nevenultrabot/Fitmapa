@@ -30,7 +30,7 @@ export default function HistoryPage() {
     supabase
       .from('bookings')
       .select(
-        'id, trainer_id, client_id, place:gyms(name), slots!inner(starts_at, ends_at, gyms(name)), client:profiles!bookings_client_id_fkey(full_name), trainers(profiles!trainers_id_fkey(full_name))'
+        'id, trainer_id, client_id, place:gyms(name), slots!inner(starts_at, ends_at, gyms(name)), client:profiles!bookings_client_id_fkey(full_name), trainers(avatar_url, profiles!trainers_id_fkey(full_name))'
       )
       .eq(isTrainer ? 'trainer_id' : 'client_id', user.id)
       .eq('status', 'confirmed')
@@ -45,6 +45,7 @@ export default function HistoryPage() {
             gym: b.place?.name || b.slots.gyms?.name || '',
             personId: isTrainer ? b.client_id : b.trainer_id,
             personName: (isTrainer ? b.client?.full_name : b.trainers?.profiles?.full_name) || (isTrainer ? 'Vežbač' : 'Trener'),
+            personAvatar: isTrainer ? null : b.trainers?.avatar_url || null,
           }))
           .sort((a, b) => new Date(b.start) - new Date(a.start));
         setRows(list);
@@ -209,9 +210,12 @@ export default function HistoryPage() {
                           {formatTime(r.start)}–{formatTime(r.end)}
                         </span>
                       </span>
-                      <span className="history-who">
-                        <strong>{r.personName}</strong>
-                        <span className="small muted">{r.gym}</span>
+                      <span className="history-who-row">
+                        <Avatar url={r.personAvatar} name={r.personName} size="sm" />
+                        <span className="history-who">
+                          <strong>{r.personName}</strong>
+                          <span className="small muted">{r.gym}</span>
+                        </span>
                       </span>
                     </li>
                   ))}
