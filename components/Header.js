@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { FiMenu, FiX } from 'react-icons/fi';
 import Logo from './Logo';
 import UserMenu from './UserMenu';
+import NotificationsBell from './NotificationsBell';
 import { useSession } from '@/lib/useSession';
 import { getSupabase } from '@/lib/supabase';
 
@@ -54,6 +55,7 @@ export default function Header() {
         </div>
       </nav>
 
+      {!loading && user && profile?.role === 'trainer' && <NotificationsBell userId={user.id} />}
       {!loading && user && (
         <UserMenu user={user} profile={profile} onLogout={logout} onNavigate={() => setOpen(false)} />
       )}

@@ -85,7 +85,7 @@ export default function UserMenu({ user, profile, onLogout, onNavigate }) {
         aria-label="Moj nalog"
       >
         <Avatar url={avatar} name={name} size="sm" />
-        {requests + pending > 0 && <span className="user-menu-dot" aria-hidden="true" />}
+        {pending > 0 && <span className="user-menu-dot" aria-hidden="true" />}
       </button>
 
       <div className="user-menu-list" role="menu">

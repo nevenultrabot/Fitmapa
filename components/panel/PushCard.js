@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FiBell, FiBellOff, FiShare } from 'react-icons/fi';
-import { pushState, enablePush, disablePush } from '@/lib/push';
+import { pushState, enablePush, PUSH_EVENT } from '@/lib/push';
 
 // Kartica u Panelu: trener uključi obaveštenja na telefonu/računaru za nove treninge i zahteve.
 export default function PushCard() {
@@ -11,7 +11,10 @@ export default function PushCard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    pushState().then(setState).catch(() => setState('unsupported'));
+    const check = () => pushState().then(setState).catch(() => setState('unsupported'));
+    check();
+    window.addEventListener(PUSH_EVENT, check);
+    return () => window.removeEventListener(PUSH_EVENT, check);
   }, []);
 
   async function turnOn() {
@@ -32,29 +35,8 @@ export default function PushCard() {
     setBusy(false);
   }
 
-  async function turnOff() {
-    setBusy(true);
-    await disablePush().catch(() => {});
-    setState('off');
-    setBusy(false);
-  }
-
-  if (!state || state === 'unsupported') return null;
-
-  if (state === 'on') {
-    return (
-      <div className="push-card is-on">
-        <FiBell aria-hidden="true" />
-        <span>
-          <strong>Obaveštenja su uključena na ovom uređaju.</strong>
-          <span className="small muted"> Javljamo ti svaki novi trening, zahtev i otkazivanje.</span>
-        </span>
-        <button className="btn btn-small btn-ghost" onClick={turnOff} disabled={busy}>
-          Isključi
-        </button>
-      </div>
-    );
-  }
+  // kad su obaveštenja uključena, kartica nestaje — status i isključivanje su na zvonu gore desno
+  if (!state || state === 'unsupported' || state === 'on') return null;
 
   return (
     <div className="push-card">
