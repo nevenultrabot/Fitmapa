@@ -11,7 +11,8 @@ const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
  * - gyms: [{ id, name, lat, lng }]
  * - selectedId, onSelect(id): izbor teretane
  * - onMapClick({lng, lat}) + pickedPoint: za biranje lokacije nove teretane
- * - onLocated({lng, lat}): kad se pronađe lokacija korisnika
+ * - onLocated({lng, lat}, { manual }): kad se pronađe lokacija korisnika (manual = klik na dugme)
+ * - sheetFraction: deo visine mape koji pokriva donji panel na telefonu (0–1), centar mape se pomera iznad njega
  */
 export default function MapView({
   gyms = [],
@@ -20,6 +21,7 @@ export default function MapView({
   onMapClick,
   pickedPoint = null,
   onLocated,
+  sheetFraction = 0,
   center = NOVI_SAD,
   zoom = 13,
   showLocate = true,
@@ -155,7 +157,22 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, autoLocate]);
 
-  function locate() {
+  // 6) Na telefonu: kad je donji panel otvoren, centar mape (npr. tvoja lokacija) se pomera iznad njega
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    const apply = () => {
+      const h = containerRef.current?.clientHeight || 0;
+      map.easeTo({ padding: { top: 0, left: 0, right: 0, bottom: Math.round(h * sheetFraction) }, duration: 450 });
+    };
+    if (map.isMoving()) {
+      map.once('moveend', apply);
+      return () => map.off('moveend', apply);
+    }
+    apply();
+  }, [ready, sheetFraction]);
+
+  function locate(manual = false) {
     if (!navigator.geolocation) {
       setNotice('Tvoj pregledač ne podržava lokaciju. Prikazujem Novi Sad.');
       return;
@@ -174,7 +191,7 @@ export default function MapView({
         el.className = 'user-dot';
         userMarkerRef.current = new maplibregl.Marker({ element: el }).setLngLat([point.lng, point.lat]).addTo(map);
         map.flyTo({ center: [point.lng, point.lat], zoom: 14 });
-        callbacks.current.onLocated?.(point);
+        callbacks.current.onLocated?.(point, { manual });
       },
       (err) => {
         setLocating(false);
@@ -193,7 +210,7 @@ export default function MapView({
     <div className={`map-wrap ${className}`}>
       <div ref={containerRef} className="map" />
       {showLocate && (
-        <button type="button" className="locate-btn" onClick={locate} disabled={locating}>
+        <button type="button" className="locate-btn" onClick={() => locate(true)} disabled={locating}>
           {locating ? 'Tražim…' : '◎ Teretane oko mene'}
         </button>
       )}

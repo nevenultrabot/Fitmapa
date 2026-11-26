@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { FaInstagram, FaTiktok } from 'react-icons/fa6';
 import Logo from './Logo';
 
-// Footer na svim stranicama (osim mape, koja zauzima ceo ekran).
+// Footer na svim stranicama. Na Mapi se ispod mape vidi traka footera, a ceo se otvara skrolovanjem.
 // Linkovi ka društvenim mrežama su za sada opšti — kad otvorimo naloge, ovde se upišu pravi.
 const LINKS = [
   { href: '/', label: 'Početna' },
@@ -20,9 +19,6 @@ const SOCIAL = [
 ];
 
 export default function Footer() {
-  const pathname = usePathname() || '/';
-  if (pathname.startsWith('/mapa')) return null;
-
   return (
     <footer className="footer">
       <div className="footer-inner">

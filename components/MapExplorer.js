@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiChevronLeft, FiList } from 'react-icons/fi';
 import MapView from '@/components/MapView';
 import GymCover from '@/components/GymCover';
@@ -20,7 +20,9 @@ function distanceKm(a, b) {
 
 /**
  * Mapa teretana sa bočnom fiokom (lista i detalji teretana).
- * Fioka: na računaru otvorena, na telefonu zatvorena — otvara se pulsirajućim dugmetom levo.
+ * Fioka: na računaru otvorena (levo), na telefonu zatvorena — otvara se pulsirajućim dugmetom levo
+ * ili dugmetom "Teretane oko mene". Na telefonu je to donji panel preko pola ekrana (mapa ostaje
+ * vidljiva iznad); povlačenjem ručice nagore se širi preko celog ekrana, nadole se skuplja/zatvara.
  * embedded = prikaz na Početnoj (bez automatske lokacije).
  */
 export default function MapExplorer({ embedded = false }) {
@@ -31,6 +33,22 @@ export default function MapExplorer({ embedded = false }) {
   const [query, setQuery] = useState('');
   // null = automatski (CSS: otvorena na računaru, zatvorena na telefonu), pa true/false posle klika
   const [drawer, setDrawer] = useState(null);
+  const [expanded, setExpanded] = useState(false); // telefon: panel preko celog ekrana
+  const [isPhone, setIsPhone] = useState(false);
+  const touchY = useRef(null);
+  const swiped = useRef(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 899px)');
+    const check = () => setIsPhone(mq.matches);
+    check();
+    mq.addEventListener?.('change', check);
+    return () => mq.removeEventListener?.('change', check);
+  }, []);
+
+  useEffect(() => {
+    if (drawer !== true) setExpanded(false);
+  }, [drawer]);
 
   useEffect(() => {
     getSupabase()
@@ -72,18 +90,64 @@ export default function MapExplorer({ embedded = false }) {
     setDrawer(true);
   }
 
+  // "Teretane oko mene": pokaži listu najbližih teretana
+  function located(point, { manual } = {}) {
+    setUserPoint(point);
+    if (manual) {
+      setSelectedId(null);
+      setQuery('');
+      setDrawer(true);
+    }
+  }
+
+  // ručica donjeg panela (telefon): dodir = pola/ceo ekran, prevlačenje gore = raširi, dole = skupi/zatvori
+  function onHandleStart(e) {
+    touchY.current = e.touches[0].clientY;
+  }
+  function onHandleEnd(e) {
+    if (touchY.current === null) return;
+    const dy = e.changedTouches[0].clientY - touchY.current;
+    touchY.current = null;
+    if (Math.abs(dy) <= 30) return; // običan dodir — rešava ga onClick
+    swiped.current = true;
+    if (dy < 0) setExpanded(true);
+    else if (expanded) setExpanded(false);
+    else setDrawer(false);
+  }
+  function onHandleClick() {
+    if (swiped.current) {
+      swiped.current = false;
+      return;
+    }
+    setExpanded((v) => !v);
+  }
+
   return (
     <div className={`map-explorer ${embedded ? 'embedded' : ''}`}>
       <MapView
         gyms={gyms}
         selectedId={selectedId}
         onSelect={select}
-        onLocated={setUserPoint}
+        onLocated={located}
+        sheetFraction={isPhone && drawer === true ? 0.5 : 0}
         autoLocate={!embedded}
         ctrlZoom={embedded}
       />
 
-      <aside className={`drawer ${drawer === null ? 'auto' : drawer ? 'open' : 'closed'}`} aria-label="Lista teretana">
+      <aside
+        className={`drawer ${drawer === null ? 'auto' : drawer ? 'open' : 'closed'} ${expanded ? 'expanded' : ''}`}
+        aria-label="Lista teretana"
+      >
+        <button
+          type="button"
+          className="drawer-handle"
+          onTouchStart={onHandleStart}
+          onTouchEnd={onHandleEnd}
+          onClick={onHandleClick}
+          aria-label={expanded ? 'Smanji panel na pola ekrana' : 'Raširi panel preko celog ekrana'}
+        >
+          <span aria-hidden="true" />
+        </button>
         <button className="drawer-close" onClick={() => setDrawer(false)} aria-label="Sakrij listu teretana" title="Sakrij listu">
           <FiChevronLeft aria-hidden="true" />
         </button>
